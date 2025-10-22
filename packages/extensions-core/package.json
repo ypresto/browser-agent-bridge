@@ -1,7 +1,29 @@
 {
   "name": "@browser-automator/extensions-core",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Browser extension core with tab/session/permission management",
+  "author": "ypresto <yuya.presto@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ypresto/browser-automator.git",
+    "directory": "packages/extensions-core"
+  },
+  "homepage": "https://github.com/ypresto/browser-automator",
+  "bugs": {
+    "url": "https://github.com/ypresto/browser-automator/issues"
+  },
+  "keywords": [
+    "browser",
+    "automation",
+    "agent",
+    "playwright",
+    "chrome",
+    "mcp"
+  ],
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
