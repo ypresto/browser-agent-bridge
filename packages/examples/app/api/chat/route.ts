@@ -9,10 +9,28 @@ import { createControllerSDK } from '@browser-automator/controller';
 import { createServerWebSocketAdapter } from '../../../lib/server-websocket-adapter';
 
 import type { WebSocket } from 'ws';
-import type { ControllerMessage } from '@browser-automator/controller';
+import type { ControllerMessage, ControllerSDK } from '@browser-automator/controller';
 
 interface GlobalWithExtension {
   getExtensionClient?: () => WebSocket | null;
+}
+
+// SDK session management - persist SDK across requests to maintain tab context
+const sdkSessions = new Map<string, {
+  sdk: ControllerSDK;
+  lastActivity: number;
+}>();
+
+// Cleanup stale sessions (older than 30 minutes)
+function cleanupStaleSessions() {
+  const thirtyMinutesAgo = Date.now() - 30 * 60 * 1000;
+  for (const [key, value] of sdkSessions.entries()) {
+    if (value.lastActivity < thirtyMinutesAgo) {
+      value.sdk.disconnect().catch(() => {});
+      sdkSessions.delete(key);
+      console.log('[SDK Sessions] Cleaned up stale session:', key);
+    }
+  }
 }
 
 // Create adapter - uses real WebSocket if extension connected, falls back to mock
@@ -58,15 +76,47 @@ function createAdapter() {
 export async function POST(req: Request) {
   const { messages } = await req.json();
 
-  // Create SDK with adapter (WebSocket if connected, otherwise mock)
-  const adapter = createAdapter();
-  const sdk = createControllerSDK({
-    adapter,
-    callerOrigin: 'http://localhost:30001', // Example Next.js app origin
-  });
+  // Extract conversation ID (use first message ID for stable key)
+  // In production, use actual user ID or conversation ID from your auth system
+  const conversationId = messages[0]?.id || 'default-conversation';
 
-  // Connect to extension
-  await sdk.connect('demo-token');
+  // Get or create SDK for this conversation
+  let sdkSession = sdkSessions.get(conversationId);
+
+  if (!sdkSession) {
+    console.log('[SDK Sessions] Creating new SDK session for:', conversationId);
+
+    // Create SDK with adapter (WebSocket if connected, otherwise mock)
+    const adapter = createAdapter();
+    const sdk = createControllerSDK({
+      adapter,
+      callerOrigin: 'http://localhost:30001', // Example Next.js app origin
+    });
+
+    // Connect to extension
+    await sdk.connect('demo-token');
+
+    sdkSession = {
+      sdk,
+      lastActivity: Date.now(),
+    };
+    sdkSessions.set(conversationId, sdkSession);
+
+    console.log('[SDK Sessions] SDK session created, total sessions:', sdkSessions.size);
+  } else {
+    console.log('[SDK Sessions] Reusing existing SDK session for:', conversationId);
+  }
+
+  // Update last activity
+  sdkSession.lastActivity = Date.now();
+
+  // Use the persistent SDK (maintains currentTabId across requests)
+  const sdk = sdkSession.sdk;
+
+  // Clean up old sessions periodically (10% chance per request)
+  if (Math.random() < 0.1) {
+    cleanupStaleSessions();
+  }
 
   // Create browser automation tools
   const tools = createBrowserTools(sdk);
