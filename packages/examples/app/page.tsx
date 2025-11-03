@@ -1,18 +1,21 @@
 'use client';
 
 import { useChat } from '@ai-sdk/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const BROWSER_AUTOMATOR_UUID = 'ba-4a8f9c2d-e1b6-4d3a-9f7e-2c8b1a5d6e3f';
 
 export default function ChatPage() {
-  const { messages, status, sendMessage } = useChat();
   const [input, setInput] = useState('');
   const [extensionStatus, setExtensionStatus] = useState<'checking' | 'active' | 'inactive'>('checking');
+  const sessionTokenRef = useRef<string | null>(null);
+
+  const { messages, status, sendMessage } = useChat();
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
     let responded = false;
+    let ws: WebSocket | null = null;
 
     // Wake up extension on page load
     const wakeUpExtension = () => {
@@ -45,10 +48,89 @@ export default function ChatPage() {
     // Small delay to ensure content script is loaded
     const initialDelay = setTimeout(wakeUpExtension, 100);
 
+    // NEW ARCHITECTURE: Connect to WebSocket server
+    // This page now acts as a bridge between WebSocket server and extension
+    const connectWebSocket = () => {
+      ws = new WebSocket('ws://localhost:30001/ws');
+
+      ws.onopen = () => {
+        console.log('[Web Page] Connected to WebSocket server');
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('[Web Page] Received from server:', data);
+
+          // Handle ping/pong
+          if (data.type === 'ping') {
+            ws?.send(JSON.stringify({ type: 'pong' }));
+            return;
+          }
+
+          // Forward command to extension via postMessage
+          if (data.requestId && data.message) {
+            const message = {
+              type: 'browser-automator-command',
+              uuid: BROWSER_AUTOMATOR_UUID,
+              nonce: crypto.randomUUID(),
+              requestId: data.requestId,
+              command: data.message,
+              // Only include sessionToken if we have one (not for initial connect)
+              ...(sessionTokenRef.current && { sessionToken: sessionTokenRef.current }),
+            };
+
+            window.postMessage(message, window.origin);
+          }
+        } catch (error) {
+          console.error('[Web Page] Failed to parse WebSocket message:', error);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('[Web Page] WebSocket error:', error);
+      };
+
+      ws.onclose = () => {
+        console.log('[Web Page] WebSocket closed');
+      };
+    };
+
+    // Listen for responses from extension
+    const handleExtensionResponse = (event: MessageEvent) => {
+      if (event.data?.type === 'browser-automator-response' && event.data.requestId) {
+        console.log('[Web Page] Received response from extension:', event.data);
+
+        // Store session token if this is a createSession response
+        if (event.data.sessionToken && !sessionTokenRef.current) {
+          console.log('[Web Page] Storing session token:', event.data.sessionToken.substring(0, 8) + '...');
+          sessionTokenRef.current = event.data.sessionToken;
+        }
+
+        // Forward response back to server via WebSocket
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            requestId: event.data.requestId,
+            payload: event.data,
+          }));
+        }
+      }
+    };
+
+    window.addEventListener('message', handleExtensionResponse);
+
+    // Connect WebSocket after small delay
+    const wsDelay = setTimeout(connectWebSocket, 200);
+
     // Cleanup on unmount
     return () => {
       clearTimeout(initialDelay);
       clearTimeout(timeoutId);
+      clearTimeout(wsDelay);
+      window.removeEventListener('message', handleExtensionResponse);
+      if (ws) {
+        ws.close();
+      }
     };
   }, []);
 

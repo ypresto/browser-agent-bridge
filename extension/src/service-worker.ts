@@ -138,7 +138,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     const session = sessionManager.createSession(callerOrigin);
     sessionCallerOrigins.set(session.sessionId, callerOrigin);
-    sendResponse(session);
+
+    // Tier 1 Security: Generate session token
+    const sessionToken = crypto.randomUUID();
+    sessionTokens.set(sessionToken, {
+      origin: callerOrigin,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+    });
+
+    console.log('[Service Worker] Session created with token:', sessionToken.substring(0, 8) + '...');
+
+    sendResponse({
+      ...session,
+      sessionToken, // Return token to caller
+    });
   } else if (message.type === 'executeCommand') {
     // NEW ARCHITECTURE: Handle commands from content script (which received them via postMessage from web page)
     // The content script has already validated the browser origin
@@ -164,25 +178,71 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           toRemove.forEach(n => usedNonces.delete(n));
         }
 
-        // Tier 1 Security: Validate session token
-        if (sessionToken) {
-          const tokenInfo = sessionTokens.get(sessionToken);
-          if (!tokenInfo || tokenInfo.expiresAt < Date.now()) {
-            console.error('[Service Worker] Invalid or expired session token');
+        // Debug: Log command details
+        console.log('[Service Worker] executeCommand - command type:', command.type, 'full command:', command);
+
+        // Special case: 'connect' command creates a new session (no token required)
+        if (command.type === 'connect') {
+          console.log('[Service Worker] Creating new session for origin:', origin);
+
+          // Validate origin is secure
+          if (!PermissionManager.isSecureOrigin(origin)) {
+            console.error('[Service Worker] Connect rejected: Insecure origin', origin);
             sendResponse({
-              error: 'Invalid or expired session token',
+              error: `Insecure origin "${origin}". Only HTTPS or localhost allowed.`,
               success: false,
             });
             return;
           }
-          if (tokenInfo.origin !== origin) {
-            console.error('[Service Worker] Session token origin mismatch');
-            sendResponse({
-              error: 'Session token origin mismatch',
-              success: false,
-            });
-            return;
-          }
+
+          // Create session
+          const session = sessionManager.createSession(origin);
+          sessionCallerOrigins.set(session.sessionId, origin);
+
+          // Generate session token
+          const newSessionToken = crypto.randomUUID();
+          sessionTokens.set(newSessionToken, {
+            origin,
+            createdAt: Date.now(),
+            expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+          });
+
+          console.log('[Service Worker] Session created:', session.sessionId, 'with token:', newSessionToken.substring(0, 8) + '...');
+
+          sendResponse({
+            ...session,
+            sessionToken: newSessionToken,
+            success: true,
+          });
+          return;
+        }
+
+        // For all other commands: Validate session token (Tier 1 Security)
+        if (!sessionToken) {
+          console.error('[Service Worker] Missing session token');
+          sendResponse({
+            error: 'Session token required',
+            success: false,
+          });
+          return;
+        }
+
+        const tokenInfo = sessionTokens.get(sessionToken);
+        if (!tokenInfo || tokenInfo.expiresAt < Date.now()) {
+          console.error('[Service Worker] Invalid or expired session token');
+          sendResponse({
+            error: 'Invalid or expired session token',
+            success: false,
+          });
+          return;
+        }
+        if (tokenInfo.origin !== origin) {
+          console.error('[Service Worker] Session token origin mismatch');
+          sendResponse({
+            error: 'Session token origin mismatch',
+            success: false,
+          });
+          return;
         }
 
         // Tier 1 Security: Track request-response correlation

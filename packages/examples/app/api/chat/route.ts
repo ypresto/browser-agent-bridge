@@ -40,12 +40,13 @@ function createAdapter() {
 
       // For all other operations, throw clear error
       throw new Error(
-        '⚠️ Chrome Extension Not Connected\n\n' +
-          'The Chrome extension is installed but not connected via WebSocket.\n\n' +
+        '⚠️ Browser Automation Not Available\n\n' +
+          'The browser automation system is not connected.\n\n' +
           'Make sure:\n' +
-          '1. The extension is enabled in chrome://extensions/\n' +
-          '2. The custom server is running (not next dev)\n' +
-          '3. Check server logs for WebSocket connection\n\n' +
+          '1. The Chrome extension is enabled in chrome://extensions/\n' +
+          '2. The custom server is running (node server.mjs, not next dev)\n' +
+          '3. The example page is open and connected to WebSocket\n' +
+          '4. Check browser console and server logs for connection status\n\n' +
           `Attempted action: ${message.type}${'tool' in message && message.tool ? ` (${message.tool})` : ''}`
       );
     },

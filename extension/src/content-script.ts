@@ -91,14 +91,22 @@ window.addEventListener('message', (event) => {
       }
 
       // Forward command to service worker with trusted origin
-      chrome.runtime.sendMessage({
+      const messageToSend = {
         type: 'executeCommand',
         command,
         origin: trustedOrigin,  // Browser-validated origin
         nonce,
         sessionToken,
         requestId,
-      }, (response) => {
+      };
+
+      console.log('[Content Script] Forwarding to service worker:', {
+        commandType: command?.type,
+        hasSessionToken: !!sessionToken,
+        hasNonce: !!nonce,
+      });
+
+      chrome.runtime.sendMessage(messageToSend, (response) => {
         // Send response back to web page
         window.postMessage({
           type: 'browser-automator-response',

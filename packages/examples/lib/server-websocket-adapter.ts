@@ -39,8 +39,10 @@ export function createServerWebSocketAdapter(
 
         pendingRequests.set(requestId, resolve);
 
+        // NEW ARCHITECTURE: Send to web page (not extension)
+        // Web page will forward via postMessage to extension
         const payload = { requestId, message };
-        console.log('[Adapter] Sending to extension:', payload);
+        console.log('[Adapter] Sending to web page:', payload);
         client.send(JSON.stringify(payload));
 
         // Timeout after 30 seconds

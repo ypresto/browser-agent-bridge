@@ -27,7 +27,9 @@ const server = createServer(async (req, res) => {
   }
 });
 
-// WebSocket server for extension communication
+// WebSocket server for web page communication
+// NEW ARCHITECTURE: Web pages connect here, not extensions
+// Flow: API Route -> WebSocket -> Web Page -> postMessage -> Extension
 const wss = new WebSocketServer({ server, path: '/ws' });
 const clients = new Map();
 const pendingRequests = new Map(); // Track pending requests from API routes
@@ -35,6 +37,7 @@ const pendingRequests = new Map(); // Track pending requests from API routes
 // Global registry for API routes to access WebSocket clients
 global.wsClients = clients;
 global.getExtensionClient = () => {
+  // Return first connected web page client (acts as bridge to extension)
   return clients.size > 0 ? Array.from(clients.values())[0] : null;
 };
 global.wsPendingRequests = pendingRequests;
@@ -42,7 +45,7 @@ global.wsPendingRequests = pendingRequests;
 wss.on('connection', (ws) => {
   const clientId = Math.random().toString(36).substring(2);
   clients.set(clientId, ws);
-  console.log(`[WebSocket] Extension ${clientId} connected (${clients.size} total)`);
+  console.log(`[WebSocket] Web page ${clientId} connected (${clients.size} total)`);
 
   ws.on('message', (data) => {
     try {
@@ -54,9 +57,10 @@ wss.on('connection', (ws) => {
         return;
       }
 
-      console.log('[WebSocket] Received from extension:', response);
+      console.log('[WebSocket] Received from web page:', response);
 
       // Check if this is a response to a pending request
+      // Web page forwards extension responses with requestId and payload
       if (response.requestId && pendingRequests.has(response.requestId)) {
         const resolver = pendingRequests.get(response.requestId);
         pendingRequests.delete(response.requestId);
@@ -69,7 +73,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     clients.delete(clientId);
-    console.log(`[WebSocket] Extension ${clientId} disconnected (${clients.size} remaining)`);
+    console.log(`[WebSocket] Web page ${clientId} disconnected (${clients.size} remaining)`);
   });
 
   ws.on('error', (error) => {
