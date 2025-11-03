@@ -54,14 +54,30 @@ export class DomCore implements DomCoreTools {
    */
   private showClickRipple(element: HTMLElement): void {
     const rect = element.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
 
+    // Add element highlight box
+    const highlight = document.createElement('div');
+    highlight.style.cssText = `
+      position: fixed;
+      left: ${rect.left}px;
+      top: ${rect.top}px;
+      width: ${rect.width}px;
+      height: ${rect.height}px;
+      border: 2px solid rgba(59, 130, 246, 0.8);
+      background: rgba(59, 130, 246, 0.1);
+      pointer-events: none;
+      z-index: 999998;
+      animation: browser-automator-highlight 0.6s ease-out;
+    `;
+
+    // Add ripple at center
     const ripple = document.createElement('div');
     ripple.style.cssText = `
       position: fixed;
-      left: ${x}px;
-      top: ${y}px;
+      left: ${centerX}px;
+      top: ${centerY}px;
       width: 20px;
       height: 20px;
       border-radius: 50%;
@@ -88,14 +104,24 @@ export class DomCore implements DomCoreTools {
             opacity: 0;
           }
         }
+        @keyframes browser-automator-highlight {
+          0% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
       `;
       document.head.appendChild(style);
     }
 
+    document.body.appendChild(highlight);
     document.body.appendChild(ripple);
 
-    // Remove ripple after animation
+    // Remove after animation
     setTimeout(() => {
+      highlight.remove();
       ripple.remove();
     }, 600);
   }
