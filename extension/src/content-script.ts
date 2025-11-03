@@ -154,8 +154,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         switch (message.tool) {
           case 'snapshot':
             console.log('[Content Script] Calling domCore.snapshot()');
-            result = { snapshot: await domCore.snapshot() };
-            console.log('[Content Script] Snapshot result:', result.snapshot.substring(0, 100) + '...');
+            const snapshotData = await domCore.snapshot();
+            console.log('[Content Script] Snapshot size:', snapshotData.length, 'characters');
+            console.log('[Content Script] Snapshot preview:', snapshotData.substring(0, 200) + '...');
+            result = { snapshot: snapshotData };
             break;
 
           case 'click':

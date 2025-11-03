@@ -128,11 +128,11 @@ export async function POST(req: Request) {
       : messages;
 
   const result = streamText({
-    model: openai('gpt-4o'),
-    system: 'You are an AI assistant that helps users by performing tasks in a web browser using browser automation tools when needed.',
+    model: openai('gpt-5-mini'),
+    system: 'You are web browser automation agent who can also chat with user. NEVER and NEVER ask for permission, confirmation, and login credentials with chat. If got login page, ask user to login manually. Retry when snapshot tool returns unexpected results.',
     messages: modelMessages,
     tools,
-    stopWhen: stepCountIs(20),
+    stopWhen: stepCountIs(40),
   });
 
   return result.toUIMessageStreamResponse();

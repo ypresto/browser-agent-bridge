@@ -48,6 +48,57 @@ export class DomCore implements DomCoreTools {
   private elementRegistry = new ElementRegistry();
   private consoleLog: ConsoleMessage[] = [];
   private networkLog: NetworkRequest[] = [];
+
+  /**
+   * Show visual ripple effect at click position
+   */
+  private showClickRipple(element: HTMLElement): void {
+    const rect = element.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+
+    const ripple = document.createElement('div');
+    ripple.style.cssText = `
+      position: fixed;
+      left: ${x}px;
+      top: ${y}px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(59, 130, 246, 0.5);
+      border: 2px solid rgba(59, 130, 246, 0.8);
+      transform: translate(-50%, -50%) scale(0);
+      pointer-events: none;
+      z-index: 999999;
+      animation: browser-automator-ripple 0.6s ease-out;
+    `;
+
+    // Add keyframes if not already added
+    if (!document.getElementById('browser-automator-ripple-styles')) {
+      const style = document.createElement('style');
+      style.id = 'browser-automator-ripple-styles';
+      style.textContent = `
+        @keyframes browser-automator-ripple {
+          0% {
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 1;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(4);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    document.body.appendChild(ripple);
+
+    // Remove ripple after animation
+    setTimeout(() => {
+      ripple.remove();
+    }, 600);
+  }
   private lastSnapshot: AccessibilitySnapshot | null = null;
 
   constructor() {
@@ -122,6 +173,9 @@ export class DomCore implements DomCoreTools {
         throw new Error(`Element not found: ${params.ref}`);
       }
     }
+
+    // Show visual ripple effect before clicking
+    this.showClickRipple(element);
 
     if (params.doubleClick) {
       element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
