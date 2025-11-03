@@ -105,26 +105,19 @@ export function createBrowserTools(sdk: ControllerSDK) {
     }),
 
     /**
-     * Evaluate JavaScript on the page
+     * REMOVED: browser_evaluate tool
+     *
+     * SECURITY RISK: Arbitrary JavaScript execution is XSS vulnerability
+     *
+     * If a malicious controller origin is allowed, evaluate() would enable:
+     * - Credential theft (steal passwords, session tokens, cookies)
+     * - DOM manipulation (inject malicious content)
+     * - User impersonation (submit forms, make purchases)
+     * - Data exfiltration (read sensitive page data)
+     *
+     * Even with permission system, evaluate is too dangerous to expose.
+     * Use specific tools (click, type, snapshot) instead.
      */
-    browser_evaluate: tool({
-      description: 'Evaluate JavaScript expression on page or element',
-      inputSchema: z.object({
-        function: z.string().describe('() => { /* code */ } or (element) => { /* code */ } when element is provided'),
-        element: z.string().optional().describe('Human-readable element description used to obtain permission to interact with the element'),
-        ref: z.string().optional().describe('Exact target element reference from the page snapshot'),
-      }),
-      execute: async ({ function: fn, element, ref }) => {
-        const params: any = { function: fn };
-        if (element !== undefined) params.element = element;
-        if (ref !== undefined) params.ref = ref;
-        const result = await sdk.evaluate(params);
-        return {
-          result: result.result,
-          error: result.error,
-        };
-      },
-    }),
 
     /**
      * Create a new tab

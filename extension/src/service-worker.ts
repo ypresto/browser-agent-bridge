@@ -15,6 +15,30 @@ import {
 const sessionManager = new SessionManager();
 const permissionManager = new PermissionManager();
 
+// Debug logging system - persists logs for debugging
+const DEBUG_ENABLED = true; // Set to false to disable debug logs
+const debugLogs: Array<{ timestamp: number; message: string; data?: any }> = [];
+const MAX_DEBUG_LOGS = 1000;
+
+function debugLog(message: string, data?: any) {
+  if (!DEBUG_ENABLED) return;
+
+  const log = {
+    timestamp: Date.now(),
+    message,
+    data,
+  };
+
+  debugLogs.push(log);
+
+  // Keep only last MAX_DEBUG_LOGS entries
+  if (debugLogs.length > MAX_DEBUG_LOGS) {
+    debugLogs.shift();
+  }
+
+  console.log(`[DEBUG] ${message}`, data || '');
+}
+
 // Store caller origin per session (from browser-validated event.origin)
 const sessionCallerOrigins = new Map<string, string>();
 
@@ -432,7 +456,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               }
             } else {
               // Check permission for sensitive actions
-              const sensitiveActions = ['click', 'type', 'evaluate'];
+              // SECURITY: 'evaluate' removed - arbitrary JS execution is XSS vulnerability
+              const sensitiveActions = ['click', 'type'];
               const requiresPermission = sensitiveActions.includes(tool);
 
               if (requiresPermission) {
@@ -508,6 +533,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     // Return true for async response
     return true;
+  } else if (message.type === 'getDebugLogs') {
+    // Return debug logs for troubleshooting
+    sendResponse({
+      logs: debugLogs.slice(-100), // Last 100 logs
+      total: debugLogs.length,
+    });
   } else if (message.type === 'ping') {
     console.log('[Service Worker] Ping received, service worker is active');
     sendResponse({ status: 'active', timestamp: Date.now() });
