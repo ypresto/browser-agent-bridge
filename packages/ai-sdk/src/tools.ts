@@ -48,6 +48,12 @@ export function createBrowserTools(sdk: ControllerSDK) {
       inputSchema: z.object({}),
       execute: async () => {
         const snapshot = await sdk.snapshot();
+
+        // Debug logging for troubleshooting
+        console.log('[Browser Automation] Snapshot captured');
+        console.log('[Browser Automation] Snapshot size:', snapshot.length, 'characters');
+        console.log('[Browser Automation] Snapshot preview (first 500 chars):', snapshot.substring(0, 500));
+
         return { snapshot };
       },
     }),
@@ -68,12 +74,22 @@ export function createBrowserTools(sdk: ControllerSDK) {
       }),
       execute: async ({ element, ref, doubleClick, button }) => {
         try {
+          // Debug logging for troubleshooting
+          console.log('[Browser Automation] Click requested');
+          console.log('[Browser Automation] Target element:', element);
+          console.log('[Browser Automation] Element ref:', ref);
+          console.log('[Browser Automation] Double click:', doubleClick || false);
+          console.log('[Browser Automation] Button:', button || 'left');
+
           const params: any = { element, ref };
           if (doubleClick !== undefined) params.doubleClick = doubleClick;
           if (button !== undefined) params.button = button;
           await sdk.click(params);
+
+          console.log('[Browser Automation] Click executed successfully');
           return { success: true };
         } catch (error) {
+          console.error('[Browser Automation] Click failed:', error);
           throw new Error(`Failed to click element: ${error instanceof Error ? error.message : String(error)}`);
         }
       },
