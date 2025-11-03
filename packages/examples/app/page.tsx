@@ -9,8 +9,17 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [extensionStatus, setExtensionStatus] = useState<'checking' | 'active' | 'inactive'>('checking');
   const sessionTokenRef = useRef<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { messages, status, sendMessage } = useChat();
+
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, [input]);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -216,23 +225,36 @@ export default function ChatPage() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          sendMessage({ text: input });
-          setInput('');
+          if (input.trim()) {
+            sendMessage({ text: input });
+            setInput('');
+          }
         }}
-        className="flex gap-2"
+        className="flex gap-2 items-end"
       >
-        <input
-          type="text"
+        <textarea
+          ref={textareaRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a message... (e.g., 'Navigate to google.com')"
-          className="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onKeyDown={(e) => {
+            // Enter without Shift submits, Shift+Enter adds newline
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              if (input.trim() && status === 'ready') {
+                sendMessage({ text: input });
+                setInput('');
+              }
+            }
+          }}
+          placeholder={"Type a message... (e.g., 'Navigate to google.com')\nShift+Enter for new line"}
+          className="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-hidden min-h-[48px] max-h-[200px]"
           disabled={status !== 'ready'}
+          rows={1}
         />
         <button
           type="submit"
           disabled={status !== 'ready'}
-          className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex-shrink-0"
         >
           Send
         </button>
