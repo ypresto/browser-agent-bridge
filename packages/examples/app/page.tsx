@@ -111,7 +111,7 @@ export default function ChatPage() {
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
             requestId: event.data.requestId,
-            payload: event.data,
+            payload: event.data.payload || event.data, // Extract nested payload if it exists
           }));
         }
       }
