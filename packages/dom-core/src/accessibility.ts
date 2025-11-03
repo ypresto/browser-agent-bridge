@@ -74,11 +74,39 @@ function extractAccessibleElements(
 }
 
 /**
+ * Check if element is visible to users
+ */
+function isElementVisible(element: HTMLElement): boolean {
+  // Check hidden attribute
+  if (element.hidden) return false;
+
+  // Get computed styles (more reliable than inline styles)
+  const style = window.getComputedStyle(element);
+
+  // Check CSS visibility properties
+  if (style.display === 'none') return false;
+  if (style.visibility === 'hidden') return false;
+  if (parseFloat(style.opacity) === 0) return false;
+
+  // Check dimensions - element must have size to be clickable
+  const rect = element.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return false;
+
+  // Check offsetParent - comprehensive visibility check
+  // Note: Fixed positioned elements can have null offsetParent but still be visible
+  if (element.offsetParent === null && style.position !== 'fixed' && style.position !== 'sticky') {
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Check if element should be included in accessibility tree
  */
 function isAccessibleElement(element: HTMLElement): boolean {
-  // Skip hidden elements
-  if (element.hidden || element.style.display === 'none') {
+  // Skip invisible elements first (comprehensive check)
+  if (!isElementVisible(element)) {
     return false;
   }
 
