@@ -54,7 +54,13 @@ export function createBrowserTools(sdk: ControllerSDK) {
         console.log('[Browser Automation] Snapshot size:', snapshot.length, 'characters');
         console.log('[Browser Automation] Snapshot preview (first 500 chars):', snapshot.substring(0, 500));
 
-        return { snapshot };
+        return {
+          snapshot,
+          debug: {
+            snapshotSize: snapshot.length,
+            preview: snapshot.substring(0, 500),
+          },
+        };
       },
     }),
 
@@ -87,7 +93,15 @@ export function createBrowserTools(sdk: ControllerSDK) {
           await sdk.click(params);
 
           console.log('[Browser Automation] Click executed successfully');
-          return { success: true };
+          return {
+            success: true,
+            debug: {
+              element,
+              ref,
+              doubleClick: doubleClick || false,
+              button: button || 'left',
+            },
+          };
         } catch (error) {
           console.error('[Browser Automation] Click failed:', error);
           throw new Error(`Failed to click element: ${error instanceof Error ? error.message : String(error)}`);
