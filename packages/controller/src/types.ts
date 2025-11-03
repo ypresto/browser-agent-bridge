@@ -10,7 +10,7 @@ import type { TabInfo } from '@browser-automator/extensions-core';
  * Message types for controller-extension communication
  */
 export type ControllerMessage =
-  | { type: 'connect'; token: string }
+  | { type: 'connect'; token: string; callerOrigin: string }
   | { type: 'disconnect'; sessionId: string }
   | { type: 'createTab'; url: string; sessionId: string }
   | { type: 'listTabs'; sessionId: string }
@@ -82,4 +82,5 @@ export interface ControllerSDK extends DomCoreTools {
 export interface ControllerConfig {
   adapter: MessagingAdapter;
   defaultTabId?: number;
+  callerOrigin: string;
 }

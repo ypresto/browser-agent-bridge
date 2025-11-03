@@ -1,6 +1,9 @@
 /**
  * Chrome Extension Service Worker
- * Manages tabs and sessions and connects to WebSocket server
+ * Manages tabs and sessions via postMessage (no WebSocket connections)
+ *
+ * New Architecture:
+ * Node Server ←WebSocket→ Web Page ←postMessage→ Browser Extension
  */
 
 import {
@@ -11,11 +14,28 @@ import {
 
 const sessionManager = new SessionManager();
 const permissionManager = new PermissionManager();
-let ws: WebSocket | null = null;
 
-// TODO: Get actual caller origin from WebSocket handshake or initial connection
-// For now, using localhost as the controller origin
-const CALLER_ORIGIN = 'http://localhost:30001';
+// Store caller origin per session (from browser-validated event.origin)
+const sessionCallerOrigins = new Map<string, string>();
+
+// Tier 1 Security: Nonce tracking for replay protection
+const usedNonces = new Set<string>();
+
+// Tier 1 Security: Session token management
+interface SessionTokenInfo {
+  origin: string;
+  createdAt: number;
+  expiresAt: number;
+}
+const sessionTokens = new Map<string, SessionTokenInfo>();
+
+// Tier 1 Security: Request-response correlation
+interface PendingRequest {
+  origin: string;
+  timestamp: number;
+  tabId: number;
+}
+const pendingRequests = new Map<string, PendingRequest>();
 
 // Permission management
 interface PendingPermissionUI {
@@ -27,320 +47,19 @@ interface PendingPermissionUI {
 
 const pendingPermissions = new Map<string, PendingPermissionUI>();
 
+// Helper function to get caller origin for a session
+function getCallerOrigin(sessionId: string): string | undefined {
+  return sessionCallerOrigins.get(sessionId);
+}
+
 // Keep service worker alive using alarms
 chrome.alarms.create('keepAlive', { periodInMinutes: 0.5 }); // Every 30 seconds
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'keepAlive') {
     console.log('[Service Worker] Keep-alive alarm triggered');
-    // Reconnect WebSocket if disconnected
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      console.log('[Service Worker] WebSocket disconnected, reconnecting...');
-      connectWebSocket();
-    }
   }
 });
-
-// Connect to WebSocket server
-function connectWebSocket() {
-  const WS_URL = 'ws://localhost:30001/ws';
-
-  ws = new WebSocket(WS_URL);
-
-  ws.onopen = () => {
-    console.log('[Service Worker] Connected to WebSocket server');
-
-    // Send keepalive ping every 20 seconds to keep service worker alive (Chrome 116+)
-    const keepAliveInterval = setInterval(() => {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'ping' }));
-      } else {
-        clearInterval(keepAliveInterval);
-      }
-    }, 20000);
-  };
-
-  ws.onmessage = async (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      console.log('[Service Worker] Received:', data);
-
-      // Handle incoming requests from server
-      if (data.requestId && data.message) {
-        const { requestId, message } = data;
-        console.log('[Service Worker] Processing message:', message.type, message);
-
-        // Process the message and generate response
-        let payload;
-
-        if (message.type === 'connect') {
-          // Create session bound to caller origin
-          const session = sessionManager.createSession(CALLER_ORIGIN);
-          payload = session;
-        } else if (message.type === 'createTab') {
-          // Check permission for createTab (navigating to target URL)
-          const { sessionId } = message;
-          if (!sessionId) {
-            payload = { error: 'Session ID required', success: false };
-          } else {
-            const targetOrigin = new URL(message.url).origin;
-            const permissionRequest: PermissionRequest = {
-              action: 'createTab',
-              callerOrigin: CALLER_ORIGIN,
-              targetOrigin,
-              url: message.url,
-            };
-
-            try {
-              const allowed = await requestPermission(permissionRequest, sessionId);
-              if (!allowed) {
-                payload = {
-                  error: `Permission denied to open tab: ${message.url}`,
-                  success: false,
-                };
-              } else {
-                // Create new tab
-                const tab = await chrome.tabs.create({ url: message.url });
-                if (tab.id) {
-                  sessionManager.addTabToSession(sessionId, tab.id);
-                }
-                payload = {
-                  id: tab.id,
-                  url: tab.url || message.url,
-                  title: tab.title || 'New Tab',
-                  sessionId,
-                };
-              }
-            } catch (error) {
-              payload = {
-                error: `Permission error: ${error instanceof Error ? error.message : String(error)}`,
-                success: false,
-              };
-            }
-          }
-        } else if (message.type === 'listTabs') {
-          // List only tabs belonging to the session
-          const { sessionId } = message;
-          if (!sessionId) {
-            payload = { error: 'Session ID required' };
-          } else {
-            const session = sessionManager.getSession(sessionId);
-            if (!session) {
-              payload = { error: 'Invalid session' };
-            } else {
-              // Get only tabs in this session
-              const sessionTabIds = session.tabIds;
-              const allTabs = await chrome.tabs.query({});
-              const sessionTabs = allTabs.filter(tab => tab.id && sessionTabIds.includes(tab.id));
-
-              payload = sessionTabs.map((tab) => ({
-                id: tab.id,
-                url: tab.url || '',
-                title: tab.title || 'Untitled',
-                sessionId: session.sessionId,
-              }));
-            }
-          }
-        } else if (message.type === 'execute') {
-          // Execute tool on tab
-          const { tool, args, sessionId } = message;
-          let { tabId } = message;
-
-          // Validate session exists
-          if (sessionId) {
-            const session = sessionManager.getSession(sessionId);
-            if (!session) {
-              payload = { error: 'Invalid session', success: false };
-              if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ requestId, payload }));
-              }
-              return;
-            }
-          }
-
-          // For navigate tool without explicit tabId, create new tab
-          if (tool === 'navigate' && (!tabId || tabId === 1)) {
-            // Check permission for navigate (to target URL)
-            const targetOrigin = new URL(args.url).origin;
-            const permissionRequest: PermissionRequest = {
-              action: 'navigate',
-              callerOrigin: CALLER_ORIGIN,
-              targetOrigin,
-              url: args.url,
-            };
-
-            try {
-              const allowed = await requestPermission(permissionRequest, 'default-session');
-              if (!allowed) {
-                payload = {
-                  error: `Permission denied to navigate to: ${args.url}`,
-                  success: false,
-                };
-              } else {
-                const tab = await chrome.tabs.create({ url: args.url });
-                if (tab.id && sessionId) {
-                  sessionManager.addTabToSession(sessionId, tab.id);
-                }
-                payload = {
-                  code: `navigate('${args.url}')`,
-                  pageState: `Navigated to ${args.url} in new tab`,
-                  tabId: tab.id,
-                };
-              }
-            } catch (error) {
-              payload = {
-                error: `Permission error: ${error instanceof Error ? error.message : String(error)}`,
-                success: false,
-              };
-            }
-          } else {
-            // If no tab ID or invalid, use active tab for other tools
-            if (!tabId || tabId === 1) {
-              const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-              tabId = tabs[0]?.id || null;
-            }
-
-            // Validate tab belongs to session (security check)
-            if (tabId && sessionId) {
-              if (!sessionManager.isTabInSession(sessionId, tabId)) {
-                payload = {
-                  error: `Access denied: Tab ${tabId} does not belong to this session`,
-                  success: false,
-                };
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                  ws.send(JSON.stringify({ requestId, payload }));
-                }
-                return;
-              }
-            }
-
-            if (!tabId) {
-              payload = { error: 'No active tab found' };
-            } else if (tool === 'navigate') {
-              // Navigate existing tab to URL (when tabId was explicitly provided)
-              // Check permission for navigate (to target URL)
-              const targetOrigin = new URL(args.url).origin;
-              const permissionRequest: PermissionRequest = {
-                action: 'navigate',
-                callerOrigin: CALLER_ORIGIN,
-                targetOrigin,
-                url: args.url,
-              };
-
-              try {
-                const allowed = await requestPermission(permissionRequest, sessionId || 'default-session');
-                if (!allowed) {
-                  payload = {
-                    error: `Permission denied to navigate to: ${args.url}`,
-                    success: false,
-                  };
-                } else {
-                  await chrome.tabs.update(tabId, { url: args.url });
-                  payload = {
-                    code: `navigate('${args.url}')`,
-                    pageState: `Navigated to ${args.url}`,
-                  };
-                }
-              } catch (error) {
-                payload = {
-                  error: `Permission error: ${error instanceof Error ? error.message : String(error)}`,
-                  success: false,
-                };
-              }
-            } else {
-              // Check permission for sensitive actions
-              const sensitiveActions = ['click', 'type', 'evaluate'];
-              const requiresPermission = sensitiveActions.includes(tool);
-
-              if (requiresPermission) {
-                try {
-                  console.log(`[Permission] Action "${tool}" requires permission`);
-                  // Get tab URL for permission context
-                  const tab = await chrome.tabs.get(tabId);
-                  const targetOrigin = tab.url ? new URL(tab.url).origin : 'unknown';
-
-                  // Build permission request
-                  const permissionRequest: PermissionRequest = {
-                    action: tool,
-                    callerOrigin: CALLER_ORIGIN,
-                    targetOrigin,
-                    element: args.element,
-                    ref: args.ref,
-                    text: args.text,
-                  };
-
-                  console.log(`[Permission] Requesting: ${CALLER_ORIGIN} → ${tool} on ${targetOrigin}`);
-
-                  // Request permission
-                  const allowed = await requestPermission(permissionRequest, 'default-session');
-                  console.log(`[Permission] Decision: ${allowed ? 'ALLOWED' : 'DENIED'}`);
-
-                  if (!allowed) {
-                    payload = {
-                      error: `Permission denied for action: ${tool}`,
-                      success: false,
-                    };
-                    // Send response and skip execution
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                      ws.send(JSON.stringify({ requestId, payload }));
-                    }
-                    return;
-                  }
-                } catch (error) {
-                  payload = {
-                    error: `Permission error: ${error instanceof Error ? error.message : String(error)}`,
-                    success: false,
-                  };
-                  if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ requestId, payload }));
-                  }
-                  return;
-                }
-              }
-
-              // Forward all other tools to content script for DOM operations
-              try {
-                const response = await chrome.tabs.sendMessage(tabId, {
-                  type: 'execute-tool',
-                  tool,
-                  args,
-                });
-                payload = response;
-              } catch (error) {
-                payload = {
-                  error: `Failed to execute tool "${tool}": ${error instanceof Error ? error.message : String(error)}`,
-                  success: false,
-                };
-              }
-            }
-          }
-        } else {
-          payload = { error: 'Unknown message type' };
-        }
-
-        // Send response back to server
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ requestId, payload }));
-        }
-      }
-    } catch (error) {
-      console.error('[Service Worker] Message parse error:', error);
-    }
-  };
-
-  ws.onclose = () => {
-    console.log('[Service Worker] Disconnected from WebSocket server');
-    // Reconnect after 3 seconds
-    setTimeout(connectWebSocket, 3000);
-  };
-
-  ws.onerror = (error) => {
-    console.error('[Service Worker] WebSocket error:', error);
-  };
-}
-
-// Start WebSocket connection
-connectWebSocket();
 
 // Request permission from user using PermissionManager
 async function requestPermission(request: PermissionRequest, sessionId: string): Promise<boolean> {
@@ -396,8 +115,337 @@ async function requestPermission(request: PermissionRequest, sessionId: string):
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'createSession') {
-    const session = sessionManager.createSession(CALLER_ORIGIN);
+    // Require callerOrigin to be provided
+    const callerOrigin = message.callerOrigin;
+    if (!callerOrigin) {
+      console.error('[Service Worker] Session creation rejected: Missing callerOrigin');
+      sendResponse({
+        error: 'Session creation rejected: callerOrigin is required.',
+        success: false,
+      });
+      return true;
+    }
+
+    // CRITICAL-3: Enforce secure origin check
+    if (!PermissionManager.isSecureOrigin(callerOrigin)) {
+      console.error('[Service Worker] Session creation rejected: Insecure origin', callerOrigin);
+      sendResponse({
+        error: `Session creation rejected: Insecure origin "${callerOrigin}". Only HTTPS or localhost allowed.`,
+        success: false,
+      });
+      return true;
+    }
+
+    const session = sessionManager.createSession(callerOrigin);
+    sessionCallerOrigins.set(session.sessionId, callerOrigin);
     sendResponse(session);
+  } else if (message.type === 'executeCommand') {
+    // NEW ARCHITECTURE: Handle commands from content script (which received them via postMessage from web page)
+    // The content script has already validated the browser origin
+    (async () => {
+      try {
+        const { command, origin, nonce, sessionToken, requestId } = message;
+
+        // Tier 1 Security: Validate nonce (replay protection)
+        if (!nonce || usedNonces.has(nonce)) {
+          console.error('[Service Worker] Replay attack detected or missing nonce');
+          sendResponse({
+            error: 'Invalid or reused nonce',
+            success: false,
+          });
+          return;
+        }
+        usedNonces.add(nonce);
+
+        // Cleanup old nonces periodically (keep last 10000 nonces)
+        if (usedNonces.size > 10000) {
+          const noncesArray = Array.from(usedNonces);
+          const toRemove = noncesArray.slice(0, usedNonces.size - 10000);
+          toRemove.forEach(n => usedNonces.delete(n));
+        }
+
+        // Tier 1 Security: Validate session token
+        if (sessionToken) {
+          const tokenInfo = sessionTokens.get(sessionToken);
+          if (!tokenInfo || tokenInfo.expiresAt < Date.now()) {
+            console.error('[Service Worker] Invalid or expired session token');
+            sendResponse({
+              error: 'Invalid or expired session token',
+              success: false,
+            });
+            return;
+          }
+          if (tokenInfo.origin !== origin) {
+            console.error('[Service Worker] Session token origin mismatch');
+            sendResponse({
+              error: 'Session token origin mismatch',
+              success: false,
+            });
+            return;
+          }
+        }
+
+        // Tier 1 Security: Track request-response correlation
+        if (requestId && command.tabId) {
+          pendingRequests.set(requestId, {
+            origin,
+            timestamp: Date.now(),
+            tabId: command.tabId,
+          });
+
+          // Cleanup old requests (keep last 1 hour)
+          const oneHourAgo = Date.now() - 3600000;
+          for (const [rid, req] of pendingRequests.entries()) {
+            if (req.timestamp < oneHourAgo) {
+              pendingRequests.delete(rid);
+            }
+          }
+        }
+
+        // Process the command
+        let payload;
+        const { type } = command;
+
+        if (type === 'createTab') {
+          const { sessionId, url } = command;
+          if (!sessionId) {
+            payload = { error: 'Session ID required', success: false };
+          } else {
+            const callerOrigin = origin;
+            const targetOrigin = new URL(url).origin;
+            const permissionRequest: PermissionRequest = {
+              action: 'createTab',
+              callerOrigin,
+              targetOrigin,
+              url,
+            };
+
+            try {
+              const allowed = await requestPermission(permissionRequest, sessionId);
+              if (!allowed) {
+                payload = {
+                  error: `Permission denied to open tab: ${url}`,
+                  success: false,
+                };
+              } else {
+                const tab = await chrome.tabs.create({ url });
+                if (tab.id) {
+                  sessionManager.addTabToSession(sessionId, tab.id);
+                }
+                payload = {
+                  id: tab.id,
+                  url: tab.url || url,
+                  title: tab.title || 'New Tab',
+                  sessionId,
+                };
+              }
+            } catch (error) {
+              payload = {
+                error: `Permission error: ${error instanceof Error ? error.message : String(error)}`,
+                success: false,
+              };
+            }
+          }
+        } else if (type === 'listTabs') {
+          const { sessionId } = command;
+          if (!sessionId) {
+            payload = { error: 'Session ID required' };
+          } else {
+            const session = sessionManager.getSession(sessionId);
+            if (!session) {
+              payload = { error: 'Invalid session' };
+            } else {
+              const sessionTabIds = session.tabIds;
+              const allTabs = await chrome.tabs.query({});
+              const sessionTabs = allTabs.filter(tab => tab.id && sessionTabIds.includes(tab.id));
+
+              payload = sessionTabs.map((tab) => ({
+                id: tab.id,
+                url: tab.url || '',
+                title: tab.title || 'Untitled',
+                sessionId: session.sessionId,
+              }));
+            }
+          }
+        } else if (type === 'execute') {
+          const { tool, args, sessionId } = command;
+          let { tabId } = command;
+
+          // Validate session exists
+          if (sessionId) {
+            const session = sessionManager.getSession(sessionId);
+            if (!session) {
+              payload = { error: 'Invalid session', success: false };
+              sendResponse({ requestId, payload });
+              return;
+            }
+          }
+
+          // For navigate tool without explicit tabId, create new tab
+          if (tool === 'navigate' && (!tabId || tabId === 1)) {
+            const callerOrigin = origin;
+            const targetOrigin = new URL(args.url).origin;
+            const permissionRequest: PermissionRequest = {
+              action: 'navigate',
+              callerOrigin,
+              targetOrigin,
+              url: args.url,
+            };
+
+            try {
+              const allowed = await requestPermission(permissionRequest, sessionId || 'default-session');
+              if (!allowed) {
+                payload = {
+                  error: `Permission denied to navigate to: ${args.url}`,
+                  success: false,
+                };
+              } else {
+                const tab = await chrome.tabs.create({ url: args.url });
+                if (tab.id && sessionId) {
+                  sessionManager.addTabToSession(sessionId, tab.id);
+                }
+                payload = {
+                  code: `navigate('${args.url}')`,
+                  pageState: `Navigated to ${args.url} in new tab`,
+                  tabId: tab.id,
+                };
+              }
+            } catch (error) {
+              payload = {
+                error: `Permission error: ${error instanceof Error ? error.message : String(error)}`,
+                success: false,
+              };
+            }
+          } else {
+            // If no tab ID or invalid, use active tab for other tools
+            if (!tabId || tabId === 1) {
+              const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+              tabId = tabs[0]?.id || null;
+            }
+
+            // Validate tab belongs to session (security check)
+            if (tabId && sessionId) {
+              if (!sessionManager.isTabInSession(sessionId, tabId)) {
+                payload = {
+                  error: `Access denied: Tab ${tabId} does not belong to this session`,
+                  success: false,
+                };
+                sendResponse({ requestId, payload });
+                return;
+              }
+            }
+
+            if (!tabId) {
+              payload = { error: 'No active tab found' };
+            } else if (tool === 'navigate') {
+              // Navigate existing tab to URL
+              const callerOrigin = origin;
+              const targetOrigin = new URL(args.url).origin;
+              const permissionRequest: PermissionRequest = {
+                action: 'navigate',
+                callerOrigin,
+                targetOrigin,
+                url: args.url,
+              };
+
+              try {
+                const allowed = await requestPermission(permissionRequest, sessionId || 'default-session');
+                if (!allowed) {
+                  payload = {
+                    error: `Permission denied to navigate to: ${args.url}`,
+                    success: false,
+                  };
+                } else {
+                  await chrome.tabs.update(tabId, { url: args.url });
+                  payload = {
+                    code: `navigate('${args.url}')`,
+                    pageState: `Navigated to ${args.url}`,
+                  };
+                }
+              } catch (error) {
+                payload = {
+                  error: `Permission error: ${error instanceof Error ? error.message : String(error)}`,
+                  success: false,
+                };
+              }
+            } else {
+              // Check permission for sensitive actions
+              const sensitiveActions = ['click', 'type', 'evaluate'];
+              const requiresPermission = sensitiveActions.includes(tool);
+
+              if (requiresPermission) {
+                try {
+                  const tab = await chrome.tabs.get(tabId);
+                  const targetOrigin = tab.url ? new URL(tab.url).origin : 'unknown';
+                  const callerOrigin = origin;
+
+                  const permissionRequest: PermissionRequest = {
+                    action: tool,
+                    callerOrigin,
+                    targetOrigin,
+                    element: args.element,
+                    ref: args.ref,
+                    text: args.text,
+                  };
+
+                  const allowed = await requestPermission(permissionRequest, sessionId || 'default-session');
+
+                  if (!allowed) {
+                    payload = {
+                      error: `Permission denied for action: ${tool}`,
+                      success: false,
+                    };
+                    sendResponse({ requestId, payload });
+                    return;
+                  }
+                } catch (error) {
+                  payload = {
+                    error: `Permission error: ${error instanceof Error ? error.message : String(error)}`,
+                    success: false,
+                  };
+                  sendResponse({ requestId, payload });
+                  return;
+                }
+              }
+
+              // Forward to content script for DOM operations
+              try {
+                const tab = await chrome.tabs.get(tabId);
+                const targetOrigin = tab.url ? new URL(tab.url).origin : undefined;
+
+                const response = await chrome.tabs.sendMessage(tabId, {
+                  type: 'execute-tool',
+                  tool,
+                  args,
+                  expectedOrigin: targetOrigin,
+                  callerOrigin: origin,
+                  sessionId: sessionId,
+                });
+                payload = response;
+              } catch (error) {
+                payload = {
+                  error: `Failed to execute tool "${tool}": ${error instanceof Error ? error.message : String(error)}`,
+                  success: false,
+                };
+              }
+            }
+          }
+        } else {
+          payload = { error: 'Unknown command type' };
+        }
+
+        sendResponse({ requestId, payload });
+      } catch (error) {
+        console.error('[Service Worker] Command execution error:', error);
+        sendResponse({
+          error: error instanceof Error ? error.message : String(error),
+          success: false,
+        });
+      }
+    })();
+
+    // Return true for async response
+    return true;
   } else if (message.type === 'ping') {
     console.log('[Service Worker] Ping received, service worker is active');
     sendResponse({ status: 'active', timestamp: Date.now() });

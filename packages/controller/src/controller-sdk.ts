@@ -29,7 +29,7 @@ import type {
 import type { TabInfo } from '@browser-automator/extensions-core';
 
 export function createControllerSDK(config: ControllerConfig): ControllerSDK {
-  const { adapter } = config;
+  const { adapter, callerOrigin } = config;
   let currentTabId: number | null = config.defaultTabId ?? null;
   let connected = false;
   let sessionId: string | null = null;
@@ -114,7 +114,7 @@ export function createControllerSDK(config: ControllerConfig): ControllerSDK {
   const sdk: ControllerSDK = {
     // Connection management
     async connect(token: string) {
-      const response = await adapter.send({ type: 'connect', token });
+      const response = await adapter.send({ type: 'connect', token, callerOrigin });
       connected = true;
       // Store sessionId for all subsequent requests
       if (typeof response === 'object' && response !== null && 'sessionId' in response) {

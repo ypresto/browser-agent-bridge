@@ -12,7 +12,10 @@ const domCore = new DomCore();
 
 console.log('[Content Script] Browser Automator Content Script loaded with DomCore');
 
-// Handle messages from the web page (for wake-up functionality)
+// NEW ARCHITECTURE: Handle messages from web page (postMessage from Node Server ← WebSocket → Web Page)
+// Tier 1 Security: Nonce tracking for replay protection (content script level)
+const usedNonces = new Set<string>();
+
 window.addEventListener('message', (event) => {
   if (event.data?.uuid === BROWSER_AUTOMATOR_UUID) {
     if (event.data?.type === 'browser-automator-init') {
@@ -33,6 +36,76 @@ window.addEventListener('message', (event) => {
           error: chrome.runtime.lastError?.message,
         }, '*');
       });
+    } else if (event.data?.type === 'browser-automator-command') {
+      // NEW ARCHITECTURE: Handle commands from web page
+      // Extract browser-validated origin (CRITICAL: This is trusted by the browser)
+      const trustedOrigin = event.origin;
+
+      console.log('[Content Script] Received command from:', trustedOrigin);
+
+      // Tier 1 Security: Validate nonce (replay protection at content script level)
+      const { nonce, sessionToken, requestId, command } = event.data;
+
+      if (!nonce) {
+        console.error('[Content Script] Missing nonce');
+        window.postMessage({
+          type: 'browser-automator-response',
+          requestId,
+          error: 'Missing nonce',
+          success: false,
+        }, event.origin);
+        return;
+      }
+
+      if (usedNonces.has(nonce)) {
+        console.error('[Content Script] Replay attack detected: nonce already used');
+        window.postMessage({
+          type: 'browser-automator-response',
+          requestId,
+          error: 'Replay attack detected',
+          success: false,
+        }, event.origin);
+        return;
+      }
+
+      // Add nonce to used set
+      usedNonces.add(nonce);
+
+      // Cleanup old nonces (keep last 10000)
+      if (usedNonces.size > 10000) {
+        const noncesArray = Array.from(usedNonces);
+        const toRemove = noncesArray.slice(0, usedNonces.size - 10000);
+        toRemove.forEach(n => usedNonces.delete(n));
+      }
+
+      // Tier 1 Security: Basic command validation
+      if (!command || typeof command !== 'object') {
+        console.error('[Content Script] Invalid command structure');
+        window.postMessage({
+          type: 'browser-automator-response',
+          requestId,
+          error: 'Invalid command structure',
+          success: false,
+        }, event.origin);
+        return;
+      }
+
+      // Forward command to service worker with trusted origin
+      chrome.runtime.sendMessage({
+        type: 'executeCommand',
+        command,
+        origin: trustedOrigin,  // Browser-validated origin
+        nonce,
+        sessionToken,
+        requestId,
+      }, (response) => {
+        // Send response back to web page
+        window.postMessage({
+          type: 'browser-automator-response',
+          requestId: requestId,
+          ...response,
+        }, event.origin);
+      });
     }
   }
 });
@@ -45,6 +118,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Execute tool directly with dom-core
     (async () => {
       try {
+        // CRITICAL-1: Origin Validation
+        // Validate that the current page origin matches the expected origin
+        // This prevents race condition attacks where a page navigates between
+        // permission grant and execution
+        if (message.expectedOrigin) {
+          const actualOrigin = window.location.origin;
+          if (message.expectedOrigin !== actualOrigin) {
+            console.error('[Content Script] Origin mismatch detected!', {
+              expected: message.expectedOrigin,
+              actual: actualOrigin,
+              tool: message.tool,
+            });
+            sendResponse({
+              error: `Origin mismatch: expected ${message.expectedOrigin}, got ${actualOrigin}. Action denied for security.`,
+              success: false,
+            });
+            return;
+          }
+          console.log('[Content Script] Origin validation passed:', actualOrigin);
+        } else {
+          console.warn('[Content Script] No expectedOrigin provided - security check skipped');
+        }
+
         let result: any;
 
         switch (message.tool) {

@@ -16,18 +16,18 @@ describe('createControllerSDK', () => {
   });
 
   it('should create SDK instance', () => {
-    const sdk = createControllerSDK({ adapter: mockAdapter });
+    const sdk = createControllerSDK({ adapter: mockAdapter, callerOrigin: 'http://localhost:30001' });
     expect(sdk).toBeDefined();
     expect(sdk.isConnected()).toBe(false);
   });
 
   it('should connect with token', async () => {
     sendSpy.mockResolvedValue({ sessionId: 'test-session', createdAt: Date.now() });
-    const sdk = createControllerSDK({ adapter: mockAdapter });
+    const sdk = createControllerSDK({ adapter: mockAdapter, callerOrigin: 'http://localhost:30001' });
 
     const result = await sdk.connect('test-token');
 
-    expect(sendSpy).toHaveBeenCalledWith({ type: 'connect', token: 'test-token' });
+    expect(sendSpy).toHaveBeenCalledWith({ type: 'connect', token: 'test-token', callerOrigin: 'http://localhost:30001' });
     expect(result.sessionId).toBe('test-session');
     expect(sdk.isConnected()).toBe(true);
   });
@@ -39,7 +39,7 @@ describe('createControllerSDK', () => {
       }
       return {};
     });
-    const sdk = createControllerSDK({ adapter: mockAdapter });
+    const sdk = createControllerSDK({ adapter: mockAdapter, callerOrigin: 'http://localhost:30001' });
 
     await sdk.connect('test-token');
     await sdk.disconnect();
@@ -58,7 +58,7 @@ describe('createControllerSDK', () => {
       }
     });
 
-    const sdk = createControllerSDK({ adapter: mockAdapter });
+    const sdk = createControllerSDK({ adapter: mockAdapter, callerOrigin: 'http://localhost:30001' });
     await sdk.connect('test-token');
 
     const tab = await sdk.tabs.create('https://example.com');
@@ -109,7 +109,7 @@ describe('createControllerSDK', () => {
         return { code: 'navigate', pageState: 'Navigated to https://example.com in new tab' };
       }
     });
-    const sdk = createControllerSDK({ adapter: mockAdapter });
+    const sdk = createControllerSDK({ adapter: mockAdapter, callerOrigin: 'http://localhost:30001' });
     await sdk.connect('test-token');
 
     const result = await sdk.navigate({ url: 'https://example.com' });
@@ -137,7 +137,7 @@ describe('createControllerSDK', () => {
       }
     });
 
-    const sdk = createControllerSDK({ adapter: mockAdapter });
+    const sdk = createControllerSDK({ adapter: mockAdapter, callerOrigin: 'http://localhost:30001' });
     await sdk.connect('test-token');
 
     const tabs = await sdk.tabs.list();
