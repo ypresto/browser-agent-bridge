@@ -41,6 +41,7 @@ const pendingRequests = new Map<string, PendingRequest>();
 interface PendingPermissionUI {
   id: string;
   request: PermissionRequest;
+  sessionId: string; // Store the real sessionId
   resolve: (allowed: boolean) => void;
   reject: (error: Error) => void;
 }
@@ -86,6 +87,7 @@ async function requestPermission(request: PermissionRequest, sessionId: string):
     const pending: PendingPermissionUI = {
       id: permissionId,
       request,
+      sessionId, // Store the real sessionId
       resolve,
       reject,
     };
@@ -524,7 +526,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         url: pending.request.url || pending.request.targetOrigin,
         callerOrigin: pending.request.callerOrigin,
         targetOrigin: pending.request.targetOrigin,
-        sessionId: 'default-session', // For UI display
+        sessionId: pending.sessionId, // Use the real sessionId from the request
         timestamp: Date.now(),
       });
     } else {
