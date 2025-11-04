@@ -60,13 +60,13 @@ export function createBrowserTools(sdk: ControllerSDK) {
         console.log('[Browser Automation] Snapshot captured');
         console.log('[Browser Automation] Snapshot type:', typeof result);
         console.log('[Browser Automation] Snapshot size:', snapshot.length, 'characters');
-        console.log('[Browser Automation] Snapshot preview (first 500 chars):', snapshot.substring(0, 500));
+        console.log('[Browser Automation] Snapshot preview (full):', snapshot);
 
         return {
           snapshot,
           debug: {
             snapshotSize: snapshot.length,
-            preview: snapshot.substring(0, 500),
+            preview: snapshot,
             resultType: typeof result,
           },
         };

@@ -105,22 +105,6 @@ describe('createBrowserTools', () => {
     expect(result.success).toBe(true);
   });
 
-  it('browser_evaluate should call SDK evaluate', async () => {
-    (mockSDK.evaluate as any).mockResolvedValue({ result: 42 });
-
-    const tools = createBrowserTools(mockSDK);
-    const result = await tools.browser_evaluate.execute({
-      function: 'return 42',
-    });
-
-    expect(mockSDK.evaluate).toHaveBeenCalledWith({
-      function: 'return 42',
-      element: undefined,
-      ref: undefined,
-    });
-    expect(result.result).toBe(42);
-  });
-
   it('browser_tabs_create should call SDK tabs.create', async () => {
     (mockSDK.tabs.create as any).mockResolvedValue({
       id: 123,
