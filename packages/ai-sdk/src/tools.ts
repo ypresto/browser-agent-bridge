@@ -47,10 +47,14 @@ export function createBrowserTools(sdk: ControllerSDK) {
       description: 'Capture accessibility snapshot of the current page, this is better than screenshot',
       inputSchema: z.object({}),
       execute: async () => {
-        const snapshot = await sdk.snapshot();
+        const result = await sdk.snapshot();
+
+        // snapshot() returns string or object with snapshot property
+        const snapshot = typeof result === 'string' ? result : (result as any).snapshot || JSON.stringify(result);
 
         // Debug logging for troubleshooting
         console.log('[Browser Automation] Snapshot captured');
+        console.log('[Browser Automation] Snapshot type:', typeof result);
         console.log('[Browser Automation] Snapshot size:', snapshot.length, 'characters');
         console.log('[Browser Automation] Snapshot preview (first 500 chars):', snapshot.substring(0, 500));
 
@@ -59,6 +63,7 @@ export function createBrowserTools(sdk: ControllerSDK) {
           debug: {
             snapshotSize: snapshot.length,
             preview: snapshot.substring(0, 500),
+            resultType: typeof result,
           },
         };
       },
