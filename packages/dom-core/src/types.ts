@@ -7,7 +7,7 @@
 export interface AccessibilitySnapshot {
   url: string;
   title: string;
-  elements: AccessibilityElement[];
+  yaml: string; // YAML-formatted accessibility tree from Playwright
   elementMap?: Map<string, HTMLElement>; // Internal map: ref -> actual DOM element
 }
 

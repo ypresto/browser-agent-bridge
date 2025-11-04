@@ -3,7 +3,7 @@
  * Implements Playwright-MCP compatible automation tools
  */
 
-import { buildAccessibilityTree, formatAsYAML } from './accessibility.js';
+import { buildAccessibilityTree } from './accessibility.js';
 import type {
   DomCoreTools,
   AccessibilitySnapshot,
@@ -142,7 +142,7 @@ export class DomCore implements DomCoreTools {
 
     const tree = await buildAccessibilityTree();
     this.lastSnapshot = tree; // Store snapshot with element map
-    const pageState = formatAsYAML(tree);
+    const pageState = tree.yaml;
 
     // Update element registry from the snapshot's element map
     if (tree.elementMap) {
@@ -163,7 +163,7 @@ export class DomCore implements DomCoreTools {
     // In browser, this would be window.history.back()
     // For testing, we'll just rebuild the tree
     const tree = await buildAccessibilityTree();
-    const pageState = formatAsYAML(tree);
+    const pageState = tree.yaml;
 
     return {
       code,
@@ -185,7 +185,7 @@ export class DomCore implements DomCoreTools {
       }
     }
 
-    return formatAsYAML(tree);
+    return tree.yaml;
   }
 
   async click(params: ClickParams): Promise<void> {
