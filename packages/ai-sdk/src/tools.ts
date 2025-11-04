@@ -36,6 +36,10 @@ export function createBrowserTools(sdk: ControllerSDK) {
           code: result.code,
           pageState: result.pageState,
           tabId: sessionTabId,
+          debug: {
+            url,
+            action: 'navigate',
+          },
         };
       },
     }),
@@ -166,6 +170,10 @@ export function createBrowserTools(sdk: ControllerSDK) {
         const tab = await sdk.tabs.create(url);
         return {
           tabId: tab.id,
+          debug: {
+            url,
+            action: 'createTab',
+          },
           url: tab.url,
           title: tab.title,
         };

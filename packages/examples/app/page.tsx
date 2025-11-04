@@ -202,9 +202,52 @@ export default function ChatPage() {
                   }
 
                   if (part.type.startsWith('tool-')) {
+                    // Debug: Log the part structure
+                    console.log('[Chat UI] Tool part:', part.type, part);
+
+                    // Extract data from tool output (not result)
+                    const toolOutput = 'output' in part ? part.output : null;
+                    let debugInfo: { element?: string; ref?: string; url?: string; action?: string } | null = null;
+                    let snapshotData: string | null = null;
+
+                    console.log('[Chat UI] Tool output:', toolOutput);
+
+                    if (toolOutput && typeof toolOutput === 'object') {
+                      if ('debug' in toolOutput) {
+                        debugInfo = toolOutput.debug as { element?: string; ref?: string; url?: string; action?: string };
+                        console.log('[Chat UI] Debug info extracted:', debugInfo);
+                      }
+                      if ('snapshot' in toolOutput && typeof toolOutput.snapshot === 'string') {
+                        snapshotData = toolOutput.snapshot;
+                        console.log('[Chat UI] Snapshot data size:', snapshotData.length);
+                      }
+                    }
+
                     return (
-                      <div key={partIdx} className="mt-1 font-mono text-xs text-blue-600">
-                        🔧 Tool: {part.type}
+                      <div key={partIdx} className="mt-2">
+                        <div className="font-mono text-xs text-blue-600">
+                          🔧 Tool: {part.type}
+                        </div>
+                        {(debugInfo || snapshotData) && (
+                          <div className="mt-1 p-2 bg-gray-100 rounded text-xs font-mono text-gray-700">
+                            {debugInfo?.element && debugInfo?.ref && (
+                              <div>Target: {debugInfo.element} ({debugInfo.ref})</div>
+                            )}
+                            {debugInfo?.url && (
+                              <div>URL: {debugInfo.url}</div>
+                            )}
+                            {snapshotData && (
+                              <details className="mt-1">
+                                <summary className="cursor-pointer hover:text-blue-600">
+                                  📄 Snapshot ({snapshotData.length.toLocaleString()} chars) - Click to expand
+                                </summary>
+                                <pre className="mt-2 p-2 bg-white border rounded overflow-auto max-h-96 text-xs whitespace-pre-wrap">
+                                  {snapshotData}
+                                </pre>
+                              </details>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   }
