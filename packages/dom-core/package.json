@@ -1,7 +1,7 @@
 {
   "name": "@browser-automator/dom-core",
   "version": "0.0.1",
-  "description": "Playwright-MCP compatible DOM automation tools using axe-core",
+  "description": "Playwright-MCP compatible DOM automation tools with W3C ARIA 1.2 compliant accessibility tree",
   "author": "ypresto <yuya.presto@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -40,9 +40,7 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist *.tsbuildinfo"
   },
-  "dependencies": {
-    "axe-core": "^4.10.2"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/jsdom": "^27.0.0",
     "@types/node": "^22.0.0",
