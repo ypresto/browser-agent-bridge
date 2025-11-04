@@ -3,10 +3,11 @@
  */
 
 import { openai } from '@ai-sdk/openai';
-import { streamText, convertToModelMessages, stepCountIs } from 'ai';
+import { streamText, convertToModelMessages, stepCountIs, tool } from 'ai';
 import { createBrowserTools } from '@browser-automator/ai-sdk';
 import { createControllerSDK } from '@browser-automator/controller';
 import { createServerWebSocketAdapter } from '../../../lib/server-websocket-adapter';
+import * as z from 'zod';
 
 import type { WebSocket } from 'ws';
 import type { ControllerMessage, ControllerSDK } from '@browser-automator/controller';
@@ -119,7 +120,7 @@ export async function POST(req: Request) {
   }
 
   // Create browser automation tools
-  const tools = createBrowserTools(sdk);
+  const browserTools = createBrowserTools(sdk);
 
   // Convert UIMessage format (from useChat) to ModelMessage format if needed
   const modelMessages =
@@ -129,9 +130,22 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: openai('gpt-5-codex'),
-    system: 'You are web browser automation agent who can also chat with user. NEVER and NEVER ask for permission, confirmation, and login credentials with chat. If got login page, ask user to login manually. Retry when snapshot tool returns unexpected results.',
+    system: ["You are web browser automation agent who can also chat with user.",
+       "NEVER and NEVER ask for permission, confirmation, and login credentials with chat.",
+       "If got login page, ask user to login manually.",
+       "If you reached step limit, you should ask user to continue.",
+       "You do batch tool call if you are sure that screen should not changed much or repeating click operation.",
+       "You have been time-traveled so you should use tool to know what time it is.",
+    ].join('\n'),
     messages: modelMessages,
-    tools,
+    tools: {
+      ...browserTools, timeNow: tool({
+        inputSchema: z.object({}),
+        execute: async () => {
+          return new Date().toLocaleString();
+        },
+      }),
+    },
     stopWhen: stepCountIs(40),
   });
 
