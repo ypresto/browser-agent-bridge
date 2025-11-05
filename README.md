@@ -16,9 +16,9 @@ Browser Agent Bridge addresses these challenges by:
 - Offering developers simple SDKs to integrate AI agents with the extension
 - Eliminating the need for complex local installations or per-application browser extensions
 
-## Examples
+## Demo
 
-See packages/examples dir.
+See [packages/examples/README.md](packages/examples/README.md)
 
 ## Architecture Summary
 
@@ -72,52 +72,41 @@ Node Server ←WebSocket→ Web Page (Tab) ←postMessage→ Browser Extension
 
 ```mermaid
 graph TB
-  subgraph "Developer's Application"
-    AI[AI Agent/Application]
-    AISDK[@browser-agent-bridge/ai-sdk]
-    Server[Node Server<br/>with WebSocket]
+  subgraph "Server"
+    AI[Vercel AI SDK]
+    BAAISDK[browser-agent-bridge/ai-sdk]
   end
 
-  subgraph "Browser Tab"
-    WebPage[Web Page]
-    WSClient[WebSocket Client]
+  subgraph "Agent Web Page Tab"
+    Bridge[Bridge Script]
+    ChatUI[Chat UI]
+    CS[Extension Content Script]
   end
 
   subgraph "Browser Extension"
-    CS[Content Script]
     SW[Service Worker]
-    PM[Permission Manager]
-    SM[Session Manager]
-    Popup[Permission Popup UI]
-    DC[DOM Core]
+    Popup[Popup for Permission Requests]
   end
 
-  AI -->|tool calls| AISDK
-  AISDK -->|SDK API| Server
-  Server <-->|WebSocket| WSClient
-  WSClient -.->|in same page| WebPage
+  subgraph "Target Web Page Tab"
+    CST[Extension Content Script]
+    Target[Target UI]
+  end
 
-  WebPage <-->|postMessage<br/>browser-validated origin| CS
-  CS -->|chrome.runtime| SW
 
-  SW -->|check permission| PM
-  SW -->|manage sessions| SM
-  SW -->|open popup| Popup
+  AI -->|tools|BAAISDK
+  BAAISDK <-->|WebSocket| Bridge
+
+  AI <--> ChatUI
+  Bridge <-->|postMessage| CS
+  CS -->|chrome.runtime.sendMessage| SW
+
+  SW -->|show| Popup
   Popup -->|user decision| SW
 
   SW -->|chrome.tabs.sendMessage| CS
-  CS -->|DOM operations| DC
-  DC -->|interact with| WebPage
-
-  SM -.->|session-level<br/>granted origins| SW
-  PM -.->|persistent<br/>policies| SW
-
-  style PM fill:#ffebee
-  style Popup fill:#ffebee
-  style SM fill:#e3f2fd
-  style DC fill:#e8f5e9
-  style WebPage fill:#e8f5e9
-  style WSClient fill:#fff3e0
+  SW -->|tool call| CST
+  CST -->|browser-agent-bridge/dom-core| Target
 ```
 
 ### Key Communication Flows
