@@ -1,5 +1,5 @@
 {
-  "name": "browser-automator",
+  "name": "browser-agent-bridge",
   "version": "0.0.1",
   "private": true,
   "description": "Playwright-MCP compatible browser automation via Chrome Extension",
@@ -7,12 +7,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ypresto/browser-automator.git",
+    "url": "https://github.com/ypresto/browser-agent-bridge.git",
     "directory": "packages/extensions-core"
   },
-  "homepage": "https://github.com/ypresto/browser-automator",
+  "homepage": "https://github.com/ypresto/browser-agent-bridge",
   "bugs": {
-    "url": "https://github.com/ypresto/browser-automator/issues"
+    "url": "https://github.com/ypresto/browser-agent-bridge/issues"
   },
   "keywords": [
     "browser",

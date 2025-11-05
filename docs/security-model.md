@@ -397,7 +397,7 @@ Before production deployment, these measures MUST be implemented:
 Include nonce in each message to prevent replay attacks:
 ```javascript
 {
-  type: 'browser-automator-command',
+  type: 'browser-agent-bridge-command',
   nonce: crypto.randomUUID(),
   tool: 'click',
   args: {}

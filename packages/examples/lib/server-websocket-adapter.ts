@@ -4,7 +4,7 @@
  */
 
 import type { WebSocket } from 'ws';
-import type { MessagingAdapter, ControllerMessage } from '@browser-automator/controller';
+import type { MessagingAdapter, ControllerMessage } from '@browser-agent-bridge/controller';
 
 export interface ServerWebSocketAdapterConfig {
   getClient: () => WebSocket | null;

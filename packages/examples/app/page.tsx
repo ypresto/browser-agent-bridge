@@ -30,13 +30,13 @@ export default function ChatPage() {
     const wakeUpExtension = () => {
       // Send wake-up message to content script
       window.postMessage({
-        type: 'browser-automator-wake-up',
+        type: 'browser-agent-bridge-wake-up',
         uuid: BROWSER_AUTOMATOR_UUID,
       }, '*');
 
       // Listen for response
       const handleResponse = (event: MessageEvent) => {
-        if (event.data?.type === 'browser-automator-wake-up-response') {
+        if (event.data?.type === 'browser-agent-bridge-wake-up-response') {
           responded = true;
           clearTimeout(timeoutId);
           setExtensionStatus(event.data.success ? 'active' : 'inactive');
@@ -80,7 +80,7 @@ export default function ChatPage() {
           // Forward command to extension via postMessage
           if (data.requestId && data.message) {
             const message = {
-              type: 'browser-automator-command',
+              type: 'browser-agent-bridge-command',
               uuid: BROWSER_AUTOMATOR_UUID,
               nonce: crypto.randomUUID(),
               requestId: data.requestId,
@@ -107,7 +107,7 @@ export default function ChatPage() {
 
     // Listen for responses from extension
     const handleExtensionResponse = (event: MessageEvent) => {
-      if (event.data?.type === 'browser-automator-response' && event.data.requestId) {
+      if (event.data?.type === 'browser-agent-bridge-response' && event.data.requestId) {
         console.log('[Web Page] Received response from extension:', event.data);
 
         // Store session token if this is a createSession response

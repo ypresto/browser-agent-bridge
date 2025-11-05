@@ -10,7 +10,7 @@ import {
   SessionManager,
   PermissionManager,
   type PermissionRequest,
-} from '@browser-automator/extensions-core';
+} from '@browser-agent-bridge/extensions-core';
 
 const sessionManager = new SessionManager();
 const permissionManager = new PermissionManager();

@@ -1,11 +1,11 @@
-# @browser-automator/examples
+# @browser-agent-bridge/examples
 
 Example Next.js application demonstrating browser automation with Vercel AI SDK.
 
 ## Features
 
 - Chat interface powered by Vercel AI SDK
-- Browser automation tools integrated via @browser-automator/ai-sdk
+- Browser automation tools integrated via @browser-agent-bridge/ai-sdk
 - WebSocket-based controller communication (mock adapter for demo)
 - 11 automation tools: navigate, snapshot, click, type, evaluate, tabs, wait, console
 
@@ -60,9 +60,9 @@ API Route (/api/chat)
   ↓
 AI SDK streamText with tools
   ↓
-@browser-automator/ai-sdk (browser tools)
-  ↓
-@browser-automator/controller (SDK)
+@browser-agent-bridge/ai-sdk (browser tools)
+├─
+@browser-agent-bridge/controller (SDK)
   ↓
 MessagingAdapter (Mock/WebSocket)
   ↓

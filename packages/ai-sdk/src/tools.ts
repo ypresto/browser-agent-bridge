@@ -4,7 +4,7 @@
 
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { ControllerSDK, TabInfo } from '@browser-automator/controller';
+import type { ControllerSDK, TabInfo } from '@browser-agent-bridge/controller';
 
 /**
  * Create browser automation tools for AI SDK

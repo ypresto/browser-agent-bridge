@@ -1,4 +1,4 @@
-# Browser Automator
+# Browser Agent Bridge
 
 playwright-mcp for AI agent web apps, that only needs a chrome extension to be installed.
 
@@ -10,11 +10,15 @@ For agent developers, many web applications also lack sufficient APIs or MCP sup
 
 End users also shouldn't be expected to solve this themselves - non-developers find it difficult to install and run generic automation tools like Playwright MCP or Puppeteer.
 
-Browser Automator addresses these challenges by:
+Browser Agent Bridge addresses these challenges by:
 
 - Providing users with a secure RPA browser extension that directly integrates with end users' browsers
 - Offering developers simple SDKs to integrate AI agents with the extension
 - Eliminating the need for complex local installations or per-application browser extensions
+
+## Examples
+
+See packages/examples dir.
 
 ## Architecture Summary
 
@@ -26,7 +30,7 @@ Node Server ←WebSocket→ Web Page (Tab) ←postMessage→ Browser Extension
 
 ### Flow
 
-1. **AI agents make tool calls** through `@browser-automator/ai-sdk`
+1. **AI agents make tool calls** through `@browser-agent-bridge/ai-sdk`
    - SDK sends commands to Node server via standard HTTP/WebSocket
 
 2. **Developer's server sends commands to web page via WebSocket**
@@ -43,7 +47,7 @@ Node Server ←WebSocket→ Web Page (Tab) ←postMessage→ Browser Extension
    - Checks permissions for the requesting origin
    - Shows popup UI for user approval when needed
    - Enforces tab isolation (sessions only access tabs they created)
-   - Executes DOM operations using `@browser-automator/dom-core`
+   - Executes DOM operations using `@browser-agent-bridge/dom-core`
 
 5. **Results flow back through the same chain**
    - Extension → postMessage → Web page → WebSocket → Server → AI agent
@@ -70,7 +74,7 @@ Node Server ←WebSocket→ Web Page (Tab) ←postMessage→ Browser Extension
 graph TB
   subgraph "Developer's Application"
     AI[AI Agent/Application]
-    AISDK[@browser-automator/ai-sdk]
+    AISDK[@browser-agent-bridge/ai-sdk]
     Server[Node Server<br/>with WebSocket]
   end
 
@@ -137,7 +141,3 @@ graph TB
 - Cross-origin isolation: evil.com cannot impersonate sane.com
 
 See [docs/security-model.md](./docs/security-model.md) for detailed security documentation.
-
-## Examples
-
-See packages/examples dir.

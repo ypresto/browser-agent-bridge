@@ -1,5 +1,5 @@
 /**
- * @browser-automator/dom-core
+ * @browser-agent-bridge/dom-core
  * Playwright-MCP compatible DOM automation tools
  */
 

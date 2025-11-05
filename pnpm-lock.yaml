@@ -20,13 +20,16 @@ importers:
 
   extension:
     dependencies:
-      '@browser-automator/dom-core':
+      '@browser-agent-bridge/dom-core':
         specifier: workspace:*
         version: link:../packages/dom-core
-      '@browser-automator/extensions-core':
+      '@browser-agent-bridge/extensions-core':
         specifier: workspace:*
         version: link:../packages/extensions-core
     devDependencies:
+      '@playwright/test':
+        specifier: ^1.49.1
+        version: 1.56.1
       '@types/chrome':
         specifier: ^0.0.280
         version: 0.0.280
@@ -42,6 +45,9 @@ importers:
       jsdom:
         specifier: ^27.0.1
         version: 27.0.1(postcss@8.5.6)
+      playwright:
+        specifier: ^1.49.1
+        version: 1.56.1
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -51,7 +57,7 @@ importers:
 
   packages/ai-sdk:
     dependencies:
-      '@browser-automator/controller':
+      '@browser-agent-bridge/controller':
         specifier: workspace:*
         version: link:../controller
       ai:
@@ -73,10 +79,10 @@ importers:
 
   packages/controller:
     dependencies:
-      '@browser-automator/dom-core':
+      '@browser-agent-bridge/dom-core':
         specifier: workspace:*
         version: link:../dom-core
-      '@browser-automator/extensions-core':
+      '@browser-agent-bridge/extensions-core':
         specifier: workspace:*
         version: link:../extensions-core
     devDependencies:
@@ -122,10 +128,10 @@ importers:
       '@ai-sdk/react':
         specifier: ^2.0.76
         version: 2.0.76(react@19.1.0)(zod@3.25.76)
-      '@browser-automator/ai-sdk':
+      '@browser-agent-bridge/ai-sdk':
         specifier: workspace:*
         version: link:../ai-sdk
-      '@browser-automator/controller':
+      '@browser-agent-bridge/controller':
         specifier: workspace:*
         version: link:../controller
       ai:
@@ -180,7 +186,7 @@ importers:
 
   packages/extensions-core:
     dependencies:
-      '@browser-automator/dom-core':
+      '@browser-agent-bridge/dom-core':
         specifier: workspace:*
         version: link:../dom-core
     devDependencies:
@@ -3597,7 +3603,6 @@ snapshots:
   '@playwright/test@1.56.1':
     dependencies:
       playwright: 1.56.1
-    optional: true
 
   '@polka/url@1.0.0-next.29': {}
 

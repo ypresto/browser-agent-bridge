@@ -1,5 +1,5 @@
 /**
- * @browser-automator/ai-sdk
+ * @browser-agent-bridge/ai-sdk
  * Vercel AI SDK tools for browser automation
  */
 

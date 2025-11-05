@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Browser Automator",
+  "name": "Browser Agent Bridge",
   "version": "0.0.1",
   "description": "Playwright-MCP compatible browser automation via Chrome Extension",
   "minimum_chrome_version": "127",

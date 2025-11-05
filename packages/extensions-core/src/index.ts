@@ -1,5 +1,5 @@
 /**
- * @browser-automator/extensions-core
+ * @browser-agent-bridge/extensions-core
  * Browser extension core with tab/session/permission management
  */
 

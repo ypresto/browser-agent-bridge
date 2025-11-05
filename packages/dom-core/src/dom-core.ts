@@ -69,7 +69,7 @@ export class DomCore implements DomCoreTools {
       background: rgba(59, 130, 246, 0.1);
       pointer-events: none;
       z-index: 999998;
-      animation: browser-automator-highlight 0.6s ease-out;
+      animation: browser-agent-bridge-highlight 0.6s ease-out;
     `;
 
     // Add ripple at center
@@ -86,15 +86,15 @@ export class DomCore implements DomCoreTools {
       transform: translate(-50%, -50%) scale(0);
       pointer-events: none;
       z-index: 999999;
-      animation: browser-automator-ripple 0.6s ease-out;
+      animation: browser-agent-bridge-ripple 0.6s ease-out;
     `;
 
     // Add keyframes if not already added
-    if (!document.getElementById('browser-automator-ripple-styles')) {
+    if (!document.getElementById('browser-agent-bridge-ripple-styles')) {
       const style = document.createElement('style');
-      style.id = 'browser-automator-ripple-styles';
+      style.id = 'browser-agent-bridge-ripple-styles';
       style.textContent = `
-        @keyframes browser-automator-ripple {
+        @keyframes browser-agent-bridge-ripple {
           0% {
             transform: translate(-50%, -50%) scale(0);
             opacity: 1;
@@ -104,7 +104,7 @@ export class DomCore implements DomCoreTools {
             opacity: 0;
           }
         }
-        @keyframes browser-automator-highlight {
+        @keyframes browser-agent-bridge-highlight {
           0% {
             opacity: 1;
           }

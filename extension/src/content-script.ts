@@ -3,7 +3,7 @@
  * Executes DOM tools directly with dom-core
  */
 
-import { DomCore } from '@browser-automator/dom-core';
+import { DomCore } from '@browser-agent-bridge/dom-core';
 
 const BROWSER_AUTOMATOR_UUID = 'ba-4a8f9c2d-e1b6-4d3a-9f7e-2c8b1a5d6e3f';
 
@@ -18,25 +18,25 @@ const usedNonces = new Set<string>();
 
 window.addEventListener('message', (event) => {
   if (event.data?.uuid === BROWSER_AUTOMATOR_UUID) {
-    if (event.data?.type === 'browser-automator-init') {
+    if (event.data?.type === 'browser-agent-bridge-init') {
       // Forward init message to service worker
       chrome.runtime.sendMessage(event.data, (response) => {
         // Send response back to controller
         window.postMessage({
-          type: 'browser-automator-response',
+          type: 'browser-agent-bridge-response',
           payload: response,
         }, '*');
       });
-    } else if (event.data?.type === 'browser-automator-wake-up') {
+    } else if (event.data?.type === 'browser-agent-bridge-wake-up') {
       // Wake up service worker by sending a ping
       chrome.runtime.sendMessage({ type: 'ping' }, (response) => {
         window.postMessage({
-          type: 'browser-automator-wake-up-response',
+          type: 'browser-agent-bridge-wake-up-response',
           success: !chrome.runtime.lastError,
           error: chrome.runtime.lastError?.message,
         }, '*');
       });
-    } else if (event.data?.type === 'browser-automator-command') {
+    } else if (event.data?.type === 'browser-agent-bridge-command') {
       // NEW ARCHITECTURE: Handle commands from web page
       // Extract browser-validated origin (CRITICAL: This is trusted by the browser)
       const trustedOrigin = event.origin;
@@ -49,7 +49,7 @@ window.addEventListener('message', (event) => {
       if (!nonce) {
         console.error('[Content Script] Missing nonce');
         window.postMessage({
-          type: 'browser-automator-response',
+          type: 'browser-agent-bridge-response',
           requestId,
           error: 'Missing nonce',
           success: false,
@@ -60,7 +60,7 @@ window.addEventListener('message', (event) => {
       if (usedNonces.has(nonce)) {
         console.error('[Content Script] Replay attack detected: nonce already used');
         window.postMessage({
-          type: 'browser-automator-response',
+          type: 'browser-agent-bridge-response',
           requestId,
           error: 'Replay attack detected',
           success: false,
@@ -82,7 +82,7 @@ window.addEventListener('message', (event) => {
       if (!command || typeof command !== 'object') {
         console.error('[Content Script] Invalid command structure');
         window.postMessage({
-          type: 'browser-automator-response',
+          type: 'browser-agent-bridge-response',
           requestId,
           error: 'Invalid command structure',
           success: false,
@@ -109,7 +109,7 @@ window.addEventListener('message', (event) => {
       chrome.runtime.sendMessage(messageToSend, (response) => {
         // Send response back to web page
         window.postMessage({
-          type: 'browser-automator-response',
+          type: 'browser-agent-bridge-response',
           requestId: requestId,
           ...response,
         }, event.origin);

@@ -5,13 +5,13 @@
 - No CLI installation
 - No server side browser rendering.
 
-## DOM Core (@browser-automator/dom-core)
+## DOM Core (@browser-agent-bridge/dom-core)
 
 - Provides [playwright-mcp core automation tools](https://github.com/microsoft/playwright-mcp#tools) compatible interface
 - Defines plain TS interface for it
 - Implements playwright-mcp equivalent accessibility tree using [axe-core](https://github.com/dequelabs/axe-core)
 
-## Browser Extensions Core (@browser-automator/extensions-core)
+## Browser Extensions Core (@browser-agent-bridge/extensions-core)
 
 - Provides playwright-mcp compatible tab management (`browser_tabs`) interface
 - Proxies any operations inside tab to actual extension
@@ -29,9 +29,9 @@
 - Chrome Extension starts content scripts and it communicates with service worker
 - Controller will send postMessage() on window with fixed UUIDv4 key (for collision prevention), and received by Content Script
 - Then service worker of extension will open new tab
-- Injected script (`web_accessible_resources`) will do actual operations using `@browser-automator/core`
+- Injected script (`web_accessible_resources`) will do actual operations using `@browser-agent-bridge/dom-core`
 
-## Browser Automator Controller (@browser-automator/controller)
+## Browser Agent Bridge Controller (@browser-agent-bridge/controller)
 
 - It provides frontend SDK for interacting with extensions
 - Provides same interface of dom-core + `browser_tabs`.
@@ -39,7 +39,7 @@
   so it can be consumed by ai-sdk.
 - Defines adapter interface type
 
-## Browser Automator MCP (@browser-automator/ai-sdk)
+## Browser Agent Bridge AI SDK (@browser-agent-bridge/ai-sdk)
 
 - Provides Vercel AI SDK tool implementation to agent
 - Communicates with controller and it's actual communication impl is provided by user.

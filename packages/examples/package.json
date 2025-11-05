@@ -1,5 +1,5 @@
 {
-  "name": "@browser-automator/examples",
+  "name": "@browser-agent-bridge/examples",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -12,8 +12,8 @@
   "dependencies": {
     "@ai-sdk/openai": "^2.0.52",
     "@ai-sdk/react": "^2.0.76",
-    "@browser-automator/ai-sdk": "workspace:*",
-    "@browser-automator/controller": "workspace:*",
+    "@browser-agent-bridge/ai-sdk": "workspace:*",
+    "@browser-agent-bridge/controller": "workspace:*",
     "ai": "^5.0.0",
     "next": "15.5.6",
     "react": "19.1.0",

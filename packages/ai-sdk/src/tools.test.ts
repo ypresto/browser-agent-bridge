@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createBrowserTools } from './tools.js';
-import type { ControllerSDK } from '@browser-automator/controller';
+import type { ControllerSDK } from '@browser-agent-bridge/controller';
 
 describe('createBrowserTools', () => {
   let mockSDK: ControllerSDK;

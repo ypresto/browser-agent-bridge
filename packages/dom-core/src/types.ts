@@ -1,5 +1,5 @@
 /**
- * Type definitions for @browser-automator/dom-core
+ * Type definitions for @browser-agent-bridge/dom-core
  * Playwright-MCP compatible interfaces
  */
 

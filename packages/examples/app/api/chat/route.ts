@@ -4,13 +4,13 @@
 
 import { openai } from '@ai-sdk/openai';
 import { streamText, convertToModelMessages, stepCountIs, tool } from 'ai';
-import { createBrowserTools } from '@browser-automator/ai-sdk';
-import { createControllerSDK } from '@browser-automator/controller';
+import { createBrowserTools } from '@browser-agent-bridge/ai-sdk';
+import { createControllerSDK } from '@browser-agent-bridge/controller';
 import { createServerWebSocketAdapter } from '../../../lib/server-websocket-adapter';
 import * as z from 'zod';
 
 import type { WebSocket } from 'ws';
-import type { ControllerMessage, ControllerSDK } from '@browser-automator/controller';
+import type { ControllerMessage, ControllerSDK } from '@browser-agent-bridge/controller';
 
 interface GlobalWithExtension {
   getExtensionClient?: () => WebSocket | null;

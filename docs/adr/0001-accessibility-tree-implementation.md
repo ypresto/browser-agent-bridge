@@ -275,7 +275,7 @@ export async function buildAccessibilityTree(): Promise<AccessibilitySnapshot> {
  * Licensed under the Apache License, Version 2.0.
  * See: https://github.com/microsoft/playwright/blob/main/LICENSE
  *
- * Modified for browser-automator-mcp:
+ * Modified for browser-agent-bridge:
  * - Fixed import paths to relative
  * - [Document any other changes]
  */

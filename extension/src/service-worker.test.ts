@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SessionManager } from '@browser-automator/extensions-core';
+import { SessionManager } from '@browser-agent-bridge/extensions-core';
 
 describe('Service Worker', () => {
   it('should create SessionManager instance', () => {

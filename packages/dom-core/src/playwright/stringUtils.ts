@@ -16,7 +16,7 @@
  */
 
 /**
- * Copied from Playwright repository for browser-automator-mcp
+ * Copied from Playwright repository
  * Source: https://github.com/microsoft/playwright
  * Original path: packages/playwright-core/src/utils/isomorphic/stringUtils.ts
  *

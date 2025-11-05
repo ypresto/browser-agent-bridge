@@ -1,17 +1,17 @@
 {
-  "name": "@browser-automator/ai-sdk",
+  "name": "@browser-agent-bridge/ai-sdk",
   "version": "0.0.1",
   "description": "Vercel AI SDK tools for browser automation",
   "author": "ypresto <yuya.presto@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ypresto/browser-automator.git",
-    "directory": "packages/extensions-core"
+    "url": "https://github.com/ypresto/browser-agent-bridge.git",
+    "directory": "packages/ai-sdk"
   },
-  "homepage": "https://github.com/ypresto/browser-automator",
+  "homepage": "https://github.com/ypresto/browser-agent-bridge",
   "bugs": {
-    "url": "https://github.com/ypresto/browser-automator/issues"
+    "url": "https://github.com/ypresto/browser-agent-bridge/issues"
   },
   "keywords": [
     "browser",
@@ -41,7 +41,7 @@
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
-    "@browser-automator/controller": "workspace:*",
+    "@browser-agent-bridge/controller": "workspace:*",
     "ai": "^5.0.0",
     "zod": "^3.24.1"
   },

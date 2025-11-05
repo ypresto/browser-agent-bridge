@@ -1,10 +1,10 @@
 /**
- * Type definitions for @browser-automator/controller
+ * Type definitions for @browser-agent-bridge/controller
  * Frontend SDK for browser automation
  */
 
-import type { DomCoreTools } from '@browser-automator/dom-core';
-import type { TabInfo } from '@browser-automator/extensions-core';
+import type { DomCoreTools } from '@browser-agent-bridge/dom-core';
+import type { TabInfo } from '@browser-agent-bridge/extensions-core';
 
 /**
  * Message types for controller-extension communication

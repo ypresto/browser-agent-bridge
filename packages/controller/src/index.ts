@@ -1,5 +1,5 @@
 /**
- * @browser-automator/controller
+ * @browser-agent-bridge/controller
  * Frontend SDK for browser automation
  */
 
@@ -16,5 +16,5 @@ export type {
 } from './types.js';
 
 // Re-export common types from dependencies for convenience
-export type { DomCoreTools } from '@browser-automator/dom-core';
-export type { TabInfo } from '@browser-automator/extensions-core';
+export type { DomCoreTools } from '@browser-agent-bridge/dom-core';
+export type { TabInfo } from '@browser-agent-bridge/extensions-core';

@@ -25,8 +25,8 @@ import type {
   ToolResponse,
   ConsoleMessage,
   NetworkRequest,
-} from '@browser-automator/dom-core';
-import type { TabInfo } from '@browser-automator/extensions-core';
+} from '@browser-agent-bridge/dom-core';
+import type { TabInfo } from '@browser-agent-bridge/extensions-core';
 
 export function createControllerSDK(config: ControllerConfig): ControllerSDK {
   const { adapter, callerOrigin } = config;

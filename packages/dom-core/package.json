@@ -1,17 +1,17 @@
 {
-  "name": "@browser-automator/dom-core",
+  "name": "@browser-agent-bridge/dom-core",
   "version": "0.0.1",
   "description": "Playwright-MCP compatible DOM automation tools with W3C ARIA 1.2 compliant accessibility tree",
   "author": "ypresto <yuya.presto@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ypresto/browser-automator.git",
-    "directory": "packages/extensions-core"
+    "url": "https://github.com/ypresto/browser-agent-bridge.git",
+    "directory": "packages/dom-core"
   },
-  "homepage": "https://github.com/ypresto/browser-automator",
+  "homepage": "https://github.com/ypresto/browser-agent-bridge",
   "bugs": {
-    "url": "https://github.com/ypresto/browser-automator/issues"
+    "url": "https://github.com/ypresto/browser-agent-bridge/issues"
   },
   "keywords": [
     "browser",

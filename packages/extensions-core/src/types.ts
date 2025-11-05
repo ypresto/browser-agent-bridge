@@ -1,8 +1,8 @@
 /**
- * Type definitions for @browser-automator/extensions-core
+ * Type definitions for @browser-agent-bridge/extensions-core
  */
 
-import type { DomCoreTools } from '@browser-automator/dom-core';
+import type { DomCoreTools } from '@browser-agent-bridge/dom-core';
 
 export interface SessionInfo {
   sessionId: string;
