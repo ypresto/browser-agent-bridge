@@ -129,7 +129,12 @@ export async function POST(req: Request) {
       : messages;
 
   const result = streamText({
-    model: openai('gpt-5-codex'),
+    model: openai('gpt-5-mini'),
+    providerOptions: {
+      openai: {
+        reasoningEffort: 'low'
+      } satisfies import("@ai-sdk/openai").OpenAIResponsesProviderOptions,
+    },
     system: ["You are web browser automation agent who can also chat with user.",
        "NEVER and NEVER ask for permission, confirmation, and login credentials with chat.",
        "If got login page, ask user to login manually.",
