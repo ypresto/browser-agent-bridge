@@ -52,24 +52,6 @@ Node Server ←WebSocket→ Web Page (Tab) ←postMessage→ Browser Extension
 5. **Results flow back through the same chain**
    - Extension → postMessage → Web page → WebSocket → Server → AI agent
 
-### Security Benefits
-
-- **Browser-Validated Origins**: `event.origin` cannot be forged, preventing cross-origin attacks
-- **No SSRF Risk**: Extension never connects to arbitrary URLs
-- **Clear Trust Boundaries**: Each component owns its own connections
-- **Origin Isolation**: evil.com cannot impersonate sane.com
-
-**Note**: The example in `packages/examples` demonstrates this flow with local development at `ws://localhost:30001`.
-
-### Security Checkpoints
-
-- **Session-origin binding**: Each session is bound to the controller's origin
-- **Tab isolation per session**: Sessions can only access tabs they created
-- **Session-level permissions**: Temporary permissions granted for the session duration
-- **Cross-session policies**: Persistent permissions saved with "Remember for domain" option
-- **Origin validation**: Content Script validates origin before DOM execution
-- **Secure origins only**: Only HTTPS or localhost controllers are allowed
-
 ```mermaid
 graph TB
   subgraph "Server"
@@ -109,24 +91,11 @@ graph TB
   CST -->|browser-agent-bridge/dom-core| Target
 ```
 
-### Key Communication Flows
-
-1. **WebSocket**: Node Server ↔ Web Page (automation commands/responses)
-2. **postMessage**: Web Page ↔ Content Script (browser-validated origin)
-3. **chrome.runtime**: Content Script → Service Worker (permission checks)
-4. **chrome.tabs.sendMessage**: Service Worker → Content Script (DOM execution)
-5. **Permission Checkpoints**:
-   - Browser validates origin via `event.origin` (cannot be forged)
-   - Session Manager: Tab isolation per session
-   - Permission Manager: Cross-session policies ("Remember" checkbox)
-   - Popup UI: User approval for new origins/actions
-
 ### Security Model
 
-- **Browser-Level Security**: Origin validated by browser's postMessage mechanism
-- Each session bound to browser-validated origin
-- Two-level permissions: session-level (temporary) + persistent policies
-- No SSRF risk: Extension never connects to arbitrary URLs
-- Cross-origin isolation: evil.com cannot impersonate sane.com
+- User gives permission per origin
+- Origin is validated using postMessage() event.origin
+- A session can access tabs which it created only
+- These prevents CSRF to other tabs than user allowed ones
 
 See [docs/security-model.md](./docs/security-model.md) for detailed security documentation.
