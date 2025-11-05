@@ -146,7 +146,7 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-screen max-w-4xl mx-auto p-4">
       <header className="mb-4">
-        <h1 className="text-2xl font-bold">Browser Automator Chat</h1>
+        <h1 className="text-2xl font-bold">Browser Agent Bridge Chat</h1>
         <p className="text-gray-600">
           Chat with AI to automate your browser. Try: &quot;Navigate to example.com and get the page snapshot&quot;
         </p>
