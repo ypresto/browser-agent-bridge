@@ -2,6 +2,7 @@
   "name": "@browser-agent-bridge/extension-chrome",
   "version": "0.0.1",
   "description": "Chrome extension for browser automation",
+  "private": true,
   "type": "module",
   "scripts": {
     "build": "node build.mjs",

@@ -2,6 +2,7 @@
   "name": "@browser-agent-bridge/extensions-core",
   "version": "0.0.1",
   "description": "Browser extension core with tab/session/permission management",
+  "private": true,
   "author": "ypresto <yuya.presto@gmail.com>",
   "license": "MIT",
   "repository": {
